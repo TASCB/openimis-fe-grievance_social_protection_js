@@ -1,6 +1,6 @@
 # How PublishedComponent Works
 
-PublishedComponent is imported from @openimis/fe-core and dynamically renders registered components using a string reference (pubRef).
+`PublishedComponent` is imported from `@openimis/fe-core` and dynamically renders registered components using a string reference `(pubRef)`.
 
 To create a new published component:
 
