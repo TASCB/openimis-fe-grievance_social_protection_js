@@ -1,8 +1,8 @@
 /* eslint-disable react/jsx-props-no-spreading */
-import React, { Component } from 'react';
-import { ConstantBasedPicker } from '@openimis/fe-core';
+import React, { Component } from "react";
+import { ConstantBasedPicker } from "@openimis/fe-core";
 
-import { TICKET_PRIORITY } from '../constants';
+import { TICKET_PRIORITY } from "../constants";
 
 // eslint-disable-next-line react/prefer-stateless-function
 class TicketPriorityPicker extends Component {

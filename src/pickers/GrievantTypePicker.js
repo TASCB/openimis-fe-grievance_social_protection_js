@@ -1,11 +1,9 @@
-import React from 'react';
-import { ConstantBasedPicker } from '@openimis/fe-core';
-import { GRIEVANT_TYPE_LIST } from '../constants';
+import React from "react";
+import { ConstantBasedPicker } from "@openimis/fe-core";
+import { GRIEVANT_TYPE_LIST } from "../constants";
 
 function GrievantTypePicker(props) {
-  const {
-    required, withNull, readOnly, onChange, value, nullLabel, withLabel,
-  } = props;
+  const { required, withNull, readOnly, onChange, value, nullLabel, withLabel } = props;
   return (
     <ConstantBasedPicker
       module="grievanceSocialProtection"

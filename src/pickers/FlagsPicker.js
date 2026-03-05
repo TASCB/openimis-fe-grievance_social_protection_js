@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useTranslations, Autocomplete, useGraphqlQuery } from '@openimis/fe-core';
+import React, { useState } from "react";
+import { useTranslations, Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
 
 function FlagPicker(props) {
   const {
@@ -16,7 +16,7 @@ function FlagPicker(props) {
     multiple,
   } = props;
   const [searchString, setSearchString] = useState(null);
-  const { formatMessage } = useTranslations('ticket');
+  const { formatMessage } = useTranslations("ticket");
 
   const { isLoading, data, error } = useGraphqlQuery(
     `query ChannelPicker {
@@ -32,8 +32,8 @@ function FlagPicker(props) {
     <Autocomplete
       multiple={multiple}
       required={required}
-      placeholder={placeholder ?? formatMessage('FlagPicker.placeholder')}
-      label={label ?? formatMessage('FlagPicker.label')}
+      placeholder={placeholder ?? formatMessage("FlagPicker.placeholder")}
+      label={label ?? formatMessage("FlagPicker.label")}
       error={error}
       withLabel={withLabel}
       withPlaceholder={withPlaceholder}
