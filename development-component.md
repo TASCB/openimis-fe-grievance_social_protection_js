@@ -6,7 +6,7 @@ To create a new published component:
 
 ## 1. Create the picker component (e.g., src/pickers/MyPicker.js):
 
-### Option A: Using ConstantBasedPicker for static options
+Option A: Using ConstantBasedPicker for static options
 
 ```js
 import React from "react";
@@ -25,7 +25,7 @@ function MyPicker(props) {
 export default MyPicker;
 ```
 
-### Option B: Using Autocomplete for dynamic/GQL-based options
+Option B: Using Autocomplete for dynamic/GQL-based options
 
 ```js
 import React, { useState } from "react";
