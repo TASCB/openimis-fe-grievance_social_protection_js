@@ -2,20 +2,23 @@
 /* eslint-disable default-param-last */
 
 import {
-  parseData, pageInfo, formatServerError, formatGraphQLError,
-  dispatchMutationReq, dispatchMutationResp, dispatchMutationErr,
+  parseData,
+  pageInfo,
+  formatServerError,
+  formatGraphQLError,
+  dispatchMutationReq,
+  dispatchMutationResp,
+  dispatchMutationErr,
   decodeId,
-} from '@openimis/fe-core';
-import {
-  CLEAR, ERROR, REQUEST, SUCCESS,
-} from './utils/action-type';
+} from "@openimis/fe-core";
+import { CLEAR, ERROR, REQUEST, SUCCESS } from "./utils/action-type";
 
 export const ACTION_TYPE = {
-  GET_GRIEVANCE_CONFIGURATION: 'GET_GRIEVANCE_CONFIGURATION',
-  MUTATION: 'GRIEVANCE_SOCIAL_PROTECTION_MUTATION',
-  RESOLVE_BY_COMMENT: 'RESOLVE_BY_COMMENT',
-  REOPEN_TICKET: 'REOPEN_TICKET',
-  CLEAR_TICKET: 'CLEAR_TICKET',
+  GET_GRIEVANCE_CONFIGURATION: "GET_GRIEVANCE_CONFIGURATION",
+  MUTATION: "GRIEVANCE_SOCIAL_PROTECTION_MUTATION",
+  RESOLVE_BY_COMMENT: "RESOLVE_BY_COMMENT",
+  REOPEN_TICKET: "REOPEN_TICKET",
+  CLEAR_TICKET: "CLEAR_TICKET",
 };
 
 function reducer(
@@ -59,7 +62,7 @@ function reducer(
   action,
 ) {
   switch (action.type) {
-    case 'TICKET_TICKETS_REQ':
+    case "TICKET_TICKETS_REQ":
       return {
         ...state,
         fetchingTickets: true,
@@ -68,7 +71,7 @@ function reducer(
         ticketsPageInfo: { totalCount: 0 },
         errorTickets: null,
       };
-    case 'TICKET_TICKETS_RESP':
+    case "TICKET_TICKETS_RESP":
       return {
         ...state,
         fetchingTickets: false,
@@ -77,13 +80,13 @@ function reducer(
         ticketsPageInfo: pageInfo(action.payload.data.tickets),
         errorTickets: formatGraphQLError(action.payload),
       };
-    case 'TICKET_TICKETS_ERR':
+    case "TICKET_TICKETS_ERR":
       return {
         ...state,
         fetching: false,
         error: formatServerError(action.payload),
       };
-    case 'TICKET_TICKET_REQ':
+    case "TICKET_TICKET_REQ":
       return {
         ...state,
         fetchingTicket: true,
@@ -91,7 +94,7 @@ function reducer(
         ticket: null,
         errorTicket: null,
       };
-    case 'TICKET_TICKET_RESP':
+    case "TICKET_TICKET_RESP":
       return {
         ...state,
         fetchingTicket: false,
@@ -115,7 +118,7 @@ function reducer(
         ticketCommentsPageInfo: { totalCount: 0 },
         errorTicketComments: null,
       };
-    case 'COMMENT_COMMENTS_REQ':
+    case "COMMENT_COMMENTS_REQ":
       return {
         ...state,
         fetchingTicketComments: false,
@@ -124,25 +127,26 @@ function reducer(
         ticketCommentsPageInfo: { totalCount: 0 },
         errorTicketComments: null,
       };
-    case 'COMMENT_COMMENTS_RESP':
+    case "COMMENT_COMMENTS_RESP":
       return {
         ...state,
         fetchingTicketComments: false,
         fetchedTicketComments: true,
-        ticketComments: parseData(action.payload.data.comments).map(
-          (comment) => ({ ...comment, id: decodeId(comment.id) }),
-        ),
+        ticketComments: parseData(action.payload.data.comments).map((comment) => ({
+          ...comment,
+          id: decodeId(comment.id),
+        })),
         ticketCommentsPageInfo: pageInfo(action.payload.data.comments),
         errorTicketComments: formatGraphQLError(action.payload),
       };
-    case 'COMMENT_COMMENTS_ERR':
+    case "COMMENT_COMMENTS_ERR":
       return {
         ...state,
         fetchingTicketComments: false,
         ticketComments: [],
         error: formatServerError(action.payload),
       };
-    case 'CATEGORY_CATEGORY_REQ':
+    case "CATEGORY_CATEGORY_REQ":
       return {
         ...state,
         fetchingCategory: true,
@@ -150,7 +154,7 @@ function reducer(
         category: [],
         errorCategory: null,
       };
-    case 'CATEGORY_CATEGORY_RESP':
+    case "CATEGORY_CATEGORY_RESP":
       return {
         ...state,
         fetchingCategory: false,
@@ -159,13 +163,13 @@ function reducer(
         categoryPageInfo: pageInfo(action.payload.data.category),
         errorCategory: formatGraphQLError(action.payload),
       };
-    case 'CATEGORY_CATEGORY_ERR':
+    case "CATEGORY_CATEGORY_ERR":
       return {
         ...state,
         fetching: false,
         error: formatServerError(action.payload),
       };
-    case 'TICKET_TICKET_ATTACHMENTS_REQ':
+    case "TICKET_TICKET_ATTACHMENTS_REQ":
       return {
         ...state,
         fetchingTicketAttachments: true,
@@ -173,7 +177,7 @@ function reducer(
         ticketAttachments: null,
         errorTicketAttachments: null,
       };
-    case 'TICKET_TICKET_ATTACHMENTS_RESP':
+    case "TICKET_TICKET_ATTACHMENTS_RESP":
       return {
         ...state,
         fetchingTicketAttachments: false,
@@ -181,13 +185,13 @@ function reducer(
         ticketAttachments: parseData(action.payload.data.ticketAttachments),
         errorTicketAttachments: formatGraphQLError(action.payload),
       };
-    case 'TICKET_TICKET_ATTACHMENTS_ERR':
+    case "TICKET_TICKET_ATTACHMENTS_ERR":
       return {
         ...state,
         fetchingTicketAttachments: false,
         errorTicketAttachments: formatServerError(action.payload),
       };
-    case 'TICKET_INSUREE_TICKETS_REQ':
+    case "TICKET_INSUREE_TICKETS_REQ":
       return {
         ...state,
         fetchingTickets: true,
@@ -196,7 +200,7 @@ function reducer(
         policy: null,
         errorTickets: null,
       };
-    case 'TICKET_INSUREE_TICKETS_RESP':
+    case "TICKET_INSUREE_TICKETS_RESP":
       return {
         ...state,
         fetchingTickets: false,
@@ -205,7 +209,7 @@ function reducer(
         ticketsPageInfo: pageInfo(action.payload.data.ticketsByInsuree),
         errorTickets: formatGraphQLError(action.payload),
       };
-    case 'TICKET_INSUREE_TICKETS_ERR':
+    case "TICKET_INSUREE_TICKETS_ERR":
       return {
         ...state,
         fetchingTickets: false,
@@ -240,25 +244,25 @@ function reducer(
     case ERROR(ACTION_TYPE.MUTATION):
       return dispatchMutationErr(state, action);
     case SUCCESS(ACTION_TYPE.RESOLVE_BY_COMMENT):
-      return dispatchMutationResp(state, 'resolveGrievanceByComment', action);
+      return dispatchMutationResp(state, "resolveGrievanceByComment", action);
     case SUCCESS(ACTION_TYPE.REOPEN_TICKET):
-      return dispatchMutationResp(state, 'reopenTicket', action);
-    case 'TICKET_MUTATION_REQ':
+      return dispatchMutationResp(state, "reopenTicket", action);
+    case "TICKET_MUTATION_REQ":
       return dispatchMutationReq(state, action);
-    case 'TICKET_MUTATION_ERR':
+    case "TICKET_MUTATION_ERR":
       return dispatchMutationErr(state, action);
-    case 'TICKET_CREATE_TICKET_RESP':
-      return dispatchMutationResp(state, 'createTicket', action);
-    case 'TICKET_UPDATE_TICKET_RESP':
-      return dispatchMutationResp(state, 'updateTicket', action);
-    case 'TICKET_DELETE_TICKET_RESP':
-      return dispatchMutationResp(state, 'deleteTicket', action);
-    case 'TICKET_ATTACHMENT_MUTATION_REQ':
+    case "TICKET_CREATE_TICKET_RESP":
+      return dispatchMutationResp(state, "createTicket", action);
+    case "TICKET_UPDATE_TICKET_RESP":
+      return dispatchMutationResp(state, "updateTicket", action);
+    case "TICKET_DELETE_TICKET_RESP":
+      return dispatchMutationResp(state, "deleteTicket", action);
+    case "TICKET_ATTACHMENT_MUTATION_REQ":
       return dispatchMutationReq(state, action);
-    case 'TICKET_ATTACHMENT_MUTATION_ERR':
+    case "TICKET_ATTACHMENT_MUTATION_ERR":
       return dispatchMutationErr(state, action);
-    case 'TICKET_CREATE_TICKET_ATTACHMENT_RESP':
-      return dispatchMutationResp(state, 'createTicketAttachment', action);
+    case "TICKET_CREATE_TICKET_ATTACHMENT_RESP":
+      return dispatchMutationResp(state, "createTicketAttachment", action);
     default:
       return state;
   }

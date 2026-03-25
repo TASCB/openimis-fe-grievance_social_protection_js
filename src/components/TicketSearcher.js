@@ -2,12 +2,12 @@
 /* eslint-disable no-undef */
 /* eslint-disable react/destructuring-assignment */
 /* eslint-disable class-methods-use-this */
-import React, { Component, Fragment } from 'react';
-import { bindActionCreators } from 'redux';
-import { connect } from 'react-redux';
-import { injectIntl } from 'react-intl';
-import { IconButton, Tooltip } from '@material-ui/core';
-import { withStyles, withTheme } from '@material-ui/core/styles';
+import React, { Component, Fragment } from "react";
+import { bindActionCreators } from "redux";
+import { connect } from "react-redux";
+import { injectIntl } from "react-intl";
+import { IconButton, Tooltip } from "@material-ui/core";
+import { withStyles, withTheme } from "@material-ui/core/styles";
 import {
   coreConfirm,
   formatMessageWithValues,
@@ -19,33 +19,23 @@ import {
   formatMessage,
   historyPush,
   decodeId,
-} from '@openimis/fe-core';
-import EditIcon from '@material-ui/icons/Edit';
+} from "@openimis/fe-core";
+import EditIcon from "@material-ui/icons/Edit";
 // import AddIcon from '@material-ui/icons/Add';
-import { MODULE_NAME, RIGHT_TICKET_EDIT } from '../constants';
-import { fetchTicketSummaries, resolveTicket } from '../actions';
-import { isEmptyObject } from '../utils/utils';
+import { MODULE_NAME, RIGHT_TICKET_EDIT } from "../constants";
+import { fetchTicketSummaries, resolveTicket } from "../actions";
+import { isEmptyObject } from "../utils/utils";
 
-import TicketFilter from './TicketFilter';
-import EnquiryDialog from './EnquiryDialog';
+import TicketFilter from "./TicketFilter";
+import EnquiryDialog from "./EnquiryDialog";
 
 const styles = (theme) => ({
-  paper: {
-    ...theme.paper.paper,
-    margin: 0,
-  },
-  paperHeader: {
-    ...theme.paper.header,
-    padding: 10,
-  },
+  paper: { ...theme.paper.paper, margin: 0 },
+  paperHeader: { ...theme.paper.header, padding: 10 },
   tableTitle: theme.table.title,
   fab: theme.fab,
-  button: {
-    margin: theme.spacing(1),
-  },
-  item: {
-    padding: theme.spacing(1),
-  },
+  button: { margin: theme.spacing(1) },
+  item: { padding: theme.spacing(1) },
 });
 
 class TicketSearcher extends Component {
@@ -61,13 +51,13 @@ class TicketSearcher extends Component {
       displayVersion: false,
     };
     this.rowsPerPageOptions = props.modulesManager.getConf(
-      'fe-grievance_social_protection',
-      'ticketFilter.rowsPerPageOptions',
+      "fe-grievance_social_protection",
+      "ticketFilter.rowsPerPageOptions",
       [10, 20, 50, 100],
     );
     this.defaultPageSize = props.modulesManager.getConf(
-      'fe-grievance_social_protection',
-      'ticketFilter.defaultPageSize',
+      "fe-grievance_social_protection",
+      "ticketFilter.defaultPageSize",
       10,
     );
   }
@@ -86,10 +76,7 @@ class TicketSearcher extends Component {
   fetch = (prms) => {
     const { showHistoryFilter } = this.state;
     this.setState({ displayVersion: showHistoryFilter });
-    this.props.fetchTicketSummaries(
-      this.props.modulesManager,
-      prms,
-    );
+    this.props.fetchTicketSummaries(this.props.modulesManager, prms);
   };
 
   rowIdentifier = (r) => r.uuid;
@@ -114,23 +101,24 @@ class TicketSearcher extends Component {
   };
 
   headers = () => [
-    'tickets.code',
-    'tickets.title',
-    'tickets.beneficary',
-    'tickets.priority',
-    'tickets.status',
-    'tickets.category',
-    this.isShowHistory() ? 'tickets.version' : '',
+    "tickets.code",
+    "tickets.category",
+    "tickets.type",
+    "tickets.status",
+    "ticket.dateOfIncident",
+    "tickets.beneficary",
+    "tickets.priority",
+    this.isShowHistory() ? "tickets.version" : "",
   ];
 
   sorts = () => [
-    ['code', true],
-    ['title', true],
-    ['reporter_id', true],
-    ['priority', true],
-    ['status', true],
-    ['category', true],
-    ['version', true],
+    ["code", true],
+    ["category", true],
+    ["category", true],
+    ["reporter_id", true],
+    ["priority", true],
+    ["status", true],
+    ["version", true],
   ];
 
   itemFormatters = () => {
@@ -138,10 +126,12 @@ class TicketSearcher extends Component {
       (ticket) => ticket.code,
       (ticket) => ticket.title,
       (ticket) => {
-        const reporter = typeof ticket.reporter === 'object'
-          ? ticket.reporter : JSON.parse(JSON.parse(ticket.reporter || '{}') || '{}');
-        let picker = '';
-        if (ticket.reporterTypeName === 'individual') {
+        const reporter =
+          typeof ticket.reporter === "object"
+            ? ticket.reporter
+            : JSON.parse(JSON.parse(ticket.reporter || "{}") || "{}");
+        let picker = "";
+        if (ticket.reporterTypeName === "individual") {
           picker = (
             <PublishedComponent
               pubRef="individual.IndividualPicker"
@@ -150,14 +140,16 @@ class TicketSearcher extends Component {
               label="ticket.reporter"
               required
               value={
-                reporter !== undefined
-                && reporter !== null ? (isEmptyObject(reporter)
-                    ? null : reporter) : null
+                reporter !== undefined && reporter !== null
+                  ? isEmptyObject(reporter)
+                    ? null
+                    : reporter
+                  : null
               }
             />
           );
         }
-        if (ticket.reporterTypeName === 'beneficiary') {
+        if (ticket.reporterTypeName === "beneficiary") {
           picker = (
             <PublishedComponent
               pubRef="socialProtection.BeneficiaryPicker"
@@ -165,27 +157,27 @@ class TicketSearcher extends Component {
               withNull
               label="ticket.reporter"
               required
-              value={
-                {
-                  individual: {
-                    firstName: ticket.reporterFirstName,
-                    lastName: ticket.reporterLastName,
-                    dob: ticket.reporterDob,
-                  },
-                }
-              }
+              value={{
+                individual: {
+                  firstName: ticket.reporterFirstName,
+                  lastName: ticket.reporterLastName,
+                  dob: ticket.reporterDob,
+                },
+              }}
             />
           );
         }
-        if (ticket.reporterTypeName === 'user') {
+        if (ticket.reporterTypeName === "user") {
           picker = (
             <PublishedComponent
               pubRef="admin.UserPicker"
               readOnly
               value={
-                reporter !== undefined
-                && reporter !== null ? (isEmptyObject(reporter)
-                    ? null : reporter) : null
+                reporter !== undefined && reporter !== null
+                  ? isEmptyObject(reporter)
+                    ? null
+                    : reporter
+                  : null
               }
               module="core"
               label="ticket.reporter"
@@ -193,7 +185,7 @@ class TicketSearcher extends Component {
           );
         }
         if (ticket.reporterTypeName === null) {
-          picker = `${formatMessage(this.props.intl, MODULE_NAME, 'anonymousUser')}`;
+          picker = `${formatMessage(this.props.intl, MODULE_NAME, "anonymousUser")}`;
         }
         return picker;
       },
@@ -205,14 +197,14 @@ class TicketSearcher extends Component {
 
     if (this.props.rights.includes(RIGHT_TICKET_EDIT)) {
       formatters.push((ticket) => (
-        <Tooltip title={formatMessage(this.props.intl, MODULE_NAME, 'editButtonTooltip')}>
+        <Tooltip title={formatMessage(this.props.intl, MODULE_NAME, "editButtonTooltip")}>
           <IconButton
             disabled={ticket?.isHistory}
             onClick={() => {
               historyPush(
                 this.props.modulesManager,
                 this.props.history,
-                'grievanceSocialProtection.route.ticket',
+                "grievanceSocialProtection.route.ticket",
                 [decodeId(ticket.id)],
                 false,
               );
@@ -233,8 +225,14 @@ class TicketSearcher extends Component {
   render() {
     const {
       intl,
-      tickets, ticketsPageInfo, fetchingTickets, fetchedTickets, errorTickets,
-      filterPaneContributionsKey, cacheFiltersKey, onDoubleClick,
+      tickets,
+      ticketsPageInfo,
+      fetchingTickets,
+      fetchedTickets,
+      errorTickets,
+      filterPaneContributionsKey,
+      cacheFiltersKey,
+      onDoubleClick,
     } = this.props;
 
     const count = ticketsPageInfo.totalCount;
@@ -266,7 +264,7 @@ class TicketSearcher extends Component {
           fetchingItems={fetchingTickets}
           fetchedItems={fetchedTickets}
           errorItems={errorTickets}
-          tableTitle={formatMessageWithValues(intl, MODULE_NAME, 'ticketSummaries', { count })}
+          tableTitle={formatMessageWithValues(intl, MODULE_NAME, "ticketSummaries", { count })}
           rowsPerPageOptions={this.rowsPerPageOptions}
           defaultPageSize={this.defaultPageSize}
           fetch={this.fetch}
@@ -287,7 +285,10 @@ class TicketSearcher extends Component {
 }
 
 const mapStateToProps = (state) => ({
-  rights: !!state.core && !!state.core.user && !!state.core.user.i_user ? state.core.user.i_user.rights : [],
+  rights:
+    !!state.core && !!state.core.user && !!state.core.user.i_user
+      ? state.core.user.i_user.rights
+      : [],
   tickets: state.grievanceSocialProtection.tickets,
   ticketsPageInfo: state.grievanceSocialProtection.ticketsPageInfo,
   fetchingTickets: state.grievanceSocialProtection.fetchingTickets,
@@ -298,15 +299,22 @@ const mapStateToProps = (state) => ({
   confirmed: state.core.confirmed,
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators(
-  {
-    fetchTicketSummaries, resolveTicket, journalize, coreConfirm,
-  },
-  dispatch,
-);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchTicketSummaries,
+      resolveTicket,
+      journalize,
+      coreConfirm,
+    },
+    dispatch,
+  );
 
 export default withModulesManager(
   withHistory(
-    connect(mapStateToProps, mapDispatchToProps)(injectIntl(withTheme(withStyles(styles)(TicketSearcher)))),
+    connect(
+      mapStateToProps,
+      mapDispatchToProps,
+    )(injectIntl(withTheme(withStyles(styles)(TicketSearcher)))),
   ),
 );

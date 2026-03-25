@@ -28,8 +28,6 @@ function CategoryPicker(props) {
     { skip: true },
   );
 
-  console.log(withPlaceholder);
-
   return (
     <Autocomplete
       multiple={multiple}

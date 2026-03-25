@@ -4,6 +4,7 @@ import { GRIEVANT_TYPE_LIST } from "../constants";
 
 function GrievantTypePicker(props) {
   const { required, withNull, readOnly, onChange, value, nullLabel, withLabel } = props;
+
   return (
     <ConstantBasedPicker
       module="grievanceSocialProtection"

@@ -24,10 +24,13 @@ class AddTicketPage extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      stateEdited: {},
+      isSaved: false,
       grievantType: null,
       benefitPlan: null,
-      isSaved: false,
+      stateEdited: {
+        flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
+        channel: "Web",
+      },
     };
   }
 
@@ -48,10 +51,13 @@ class AddTicketPage extends Component {
   };
 
   updateAttribute = (k, v) => {
-    this.setState((state) => ({
-      stateEdited: { ...state.stateEdited, [k]: v },
-      isSaved: false, // Reset isSaved when form is modified
-    }));
+    this.setState((state) => {
+      const updatedState = { ...state.stateEdited, [k]: v };
+      if (k === "title") {
+        updatedState.category = null;
+      }
+      return { isSaved: false, stateEdited: updatedState };
+    });
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -66,16 +72,12 @@ class AddTicketPage extends Component {
   updateTypeOfGrievant = (field, value) => {
     this.updateAttribute("reporter", null);
     this.updateAttribute("reporterType", value);
-    this.setState((state) => ({
-      grievantType: value,
-    }));
+    this.setState((state) => ({ grievantType: value }));
   };
 
   updateBenefitPlan = (field, value) => {
     this.updateAttribute("reporter", null);
-    this.setState((state) => ({
-      benefitPlan: value,
-    }));
+    this.setState((state) => ({ benefitPlan: value }));
   };
 
   render() {
@@ -175,7 +177,9 @@ class AddTicketPage extends Component {
                   </Grid>
                 )}
               </Grid>
+
               <Divider />
+
               <Grid container className={classes.item}>
                 {grievantType === "individual" && (
                   <>
@@ -288,7 +292,7 @@ class AddTicketPage extends Component {
               </Grid>
               <Divider />
               <Grid container className={classes.item}>
-                <Grid item xs={6} className={classes.item}>
+                {/* <Grid item xs={6} className={classes.item}>
                   <TextInput
                     label="ticket.title"
                     value={stateEdited.title}
@@ -296,14 +300,24 @@ class AddTicketPage extends Component {
                     required
                     readOnly={isSaved}
                   />
+                </Grid> */}
+
+                <Grid item xs={6} className={classes.item}>
+                  <PublishedComponent
+                    pubRef="grievanceSocialProtection.TicketTypePicker"
+                    label="ticket.title"
+                    value={stateEdited?.title ?? null}
+                    onChange={(v) => this.updateAttribute("title", v)}
+                  />
                 </Grid>
 
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.TicketType"
-                    label="ticket.dateOfIncident"
-                    value={""}
-                    onChange={(v) => updateValue(v)}
+                    pubRef="grievanceSocialProtection.TicketCategoryPicker"
+                    label="ticket.category"
+                    value={stateEdited.category}
+                    onChange={(v) => this.updateAttribute("category", v)}
+                    type={stateEdited.title}
                   />
                 </Grid>
 
@@ -318,7 +332,7 @@ class AddTicketPage extends Component {
                   />
                 </Grid>
 
-                <Grid item xs={6} className={classes.item}>
+                {/* <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
                     pubRef="grievanceSocialProtection.DropDownCategoryPicker"
                     value={stateEdited.category}
@@ -326,7 +340,7 @@ class AddTicketPage extends Component {
                     required
                     readOnly={isSaved}
                   />
-                </Grid>
+                </Grid> */}
 
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
@@ -347,7 +361,8 @@ class AddTicketPage extends Component {
                     readOnly={isSaved}
                   />
                 </Grid>
-                <Grid item xs={6} className={classes.item}>
+
+                {/* <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
                     pubRef="grievanceSocialProtection.TicketPriorityPicker"
                     value={stateEdited.priority}
@@ -355,7 +370,8 @@ class AddTicketPage extends Component {
                     required={false}
                     readOnly={isSaved}
                   />
-                </Grid>
+                </Grid> */}
+
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
                     pubRef="admin.UserPicker"
@@ -405,13 +421,17 @@ class AddTicketPage extends Component {
 }
 
 // eslint-disable-next-line no-unused-vars
-const mapStateToProps = (state, props) => ({
-  submittingMutation: state.grievanceSocialProtection.submittingMutation,
-  mutation: state.grievanceSocialProtection.mutation,
-  grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
-});
+function mapStateToProps(state, props) {
+  return {
+    submittingMutation: state.grievanceSocialProtection.submittingMutation,
+    mutation: state.grievanceSocialProtection.mutation,
+    grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
+  };
+}
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({ createTicket, journalize }, dispatch);
+function mapDispatchToProps(dispatch) {
+  return bindActionCreators({ createTicket, journalize }, dispatch);
+}
 
 export default withTheme(
   withStyles(styles)(connect(mapStateToProps, mapDispatchToProps)(AddTicketPage)),
