@@ -10,11 +10,10 @@ import {
   withHistory,
   withTooltip,
   formatMessage,
-  decodeId,
 } from "@openimis/fe-core";
 
 import { MODULE_NAME, RIGHT_TICKET_ADD } from "../constants";
-import TicketCategoriesSearcher from "../components/TicketCategoriesSearcher";
+import GrievanceCategoriesSearcher from "../components/GrievanceCategoriesSearcher";
 
 function styles(theme) {
   return {
@@ -24,24 +23,13 @@ function styles(theme) {
 }
 
 function TicketCategoriesPage({ intl, classes, rights, modulesManager, history }) {
-  function onDoubleClick(ticket, newTab = false) {
-    const routeParams = ["grievanceSocialProtection.route.ticket", [decodeId(ticket.id)]];
-    if (ticket?.isHistory) {
-      routeParams[1].push(ticket.version);
-    }
-    historyPush(modulesManager, history, ...routeParams, newTab);
-  }
-
   function handleCreate() {
-    historyPush(modulesManager, history, "grievanceSocialProtection.route.ticket");
+    historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketCategoryCreate");
   }
 
   return (
     <div className={classes.page}>
-      <TicketCategoriesSearcher
-        cacheFiltersKey="ticketPageFiltersCache"
-        onDoubleClick={onDoubleClick}
-      />
+      <GrievanceCategoriesSearcher cacheFiltersKey="grievanceCategoryPageFiltersCache" />
 
       {rights.includes(RIGHT_TICKET_ADD) &&
         withTooltip(
@@ -50,7 +38,7 @@ function TicketCategoriesPage({ intl, classes, rights, modulesManager, history }
               <AddIcon />
             </Fab>
           </div>,
-          formatMessage(intl, MODULE_NAME, "addNewticketTooltip"),
+          formatMessage(intl, MODULE_NAME, "grievanceCategory.create"),
         )}
     </div>
   );

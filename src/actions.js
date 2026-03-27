@@ -32,9 +32,48 @@ const CATEGORY_FULL_PROJECTION = () => [
   "validityTo",
 ];
 
+const GRIEVANCE_TYPE_PROJECTION = () => ["id", "code", "name", "isActive"];
+
+const GRIEVANCE_CATEGORY_PROJECTION = () => [
+  "id",
+  "code",
+  "name",
+  "isActive",
+  "type{id, code, name}",
+  "typeName",
+];
+
 export function fetchCategoryForPicker(mm, filters) {
   const payload = formatPageQueryWithCount("category", filters, CATEGORY_FULL_PROJECTION(mm));
   return graphql(payload, "CATEGORY_CATEGORY");
+}
+
+export function fetchGrievanceCategories(mm, filters) {
+  const payload = formatPageQueryWithCount(
+    "grievanceCategories",
+    filters,
+    GRIEVANCE_CATEGORY_PROJECTION(mm),
+  );
+  return graphql(payload, "GRIEVANCE_CATEGORY_CATEGORIES");
+}
+
+export function fetchGrievanceCategory(mm, filters) {
+  const payload = formatPageQueryWithCount(
+    "grievanceCategories",
+    filters,
+    GRIEVANCE_CATEGORY_PROJECTION(mm),
+  );
+  return graphql(payload, "GRIEVANCE_CATEGORY_CATEGORY");
+}
+
+export function fetchGrievanceTypes(mm, filters = []) {
+  const payload = formatPageQueryWithCount("grievanceTypes", filters, GRIEVANCE_TYPE_PROJECTION(mm));
+  return graphql(payload, "GRIEVANCE_TYPE_TYPES");
+}
+
+export function fetchGrievanceType(mm, filters = []) {
+  const payload = formatPageQueryWithCount("grievanceTypes", filters, GRIEVANCE_TYPE_PROJECTION(mm));
+  return graphql(payload, "GRIEVANCE_TYPE_TYPE");
 }
 
 export function fetchTicketSummaries(mm, filters) {
@@ -185,6 +224,115 @@ export function resolveTicketGQL(ticket) {
     ${!!ticket.insuree && !!ticket.insuree.id ? `insureeUuid: "${ticket.insuree.uuid}"` : ""}
     ${!!ticket.category && !!ticket.category.id ? `categoryUuid: "${ticket.category.uuid}"` : ""}
   `;
+}
+
+export function formatGrievanceCategoryGQL(category) {
+  return `
+    ${category.id ? `id: "${formatGQLString(category.id)}"` : ""}
+    ${category.code ? `code: "${formatGQLString(category.code)}"` : ""}
+    ${category.name ? `name: "${formatGQLString(category.name)}"` : ""}
+    ${typeof category.isActive === "boolean" ? `isActive: ${category.isActive}` : ""}
+    ${category.type?.id ? `typeId: "${formatGQLString(category.type.id)}"` : ""}
+  `;
+}
+
+export function formatGrievanceTypeGQL(type) {
+  return `
+    ${type.id ? `id: "${formatGQLString(type.id)}"` : ""}
+    ${type.code ? `code: "${formatGQLString(type.code)}"` : ""}
+    ${type.name ? `name: "${formatGQLString(type.name)}"` : ""}
+    ${typeof type.isActive === "boolean" ? `isActive: ${type.isActive}` : ""}
+  `;
+}
+
+export function createGrievanceCategory(category, clientMutationLabel) {
+  const mutation = formatMutation(
+    "createGrievanceCategory",
+    formatGrievanceCategoryGQL(category),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CATEGORY_MUTATION_REQ",
+      "GRIEVANCE_CATEGORY_CREATE_RESP",
+      "GRIEVANCE_CATEGORY_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function updateGrievanceCategory(category, clientMutationLabel) {
+  const mutation = formatMutation(
+    "updateGrievanceCategory",
+    formatGrievanceCategoryGQL(category),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CATEGORY_MUTATION_REQ",
+      "GRIEVANCE_CATEGORY_UPDATE_RESP",
+      "GRIEVANCE_CATEGORY_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: category.id,
+    },
+  );
+}
+
+export function createGrievanceType(type, clientMutationLabel) {
+  const mutation = formatMutation(
+    "createGrievanceType",
+    formatGrievanceTypeGQL(type),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_TYPE_MUTATION_REQ",
+      "GRIEVANCE_TYPE_CREATE_RESP",
+      "GRIEVANCE_TYPE_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function updateGrievanceType(type, clientMutationLabel) {
+  const mutation = formatMutation(
+    "updateGrievanceType",
+    formatGrievanceTypeGQL(type),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_TYPE_MUTATION_REQ",
+      "GRIEVANCE_TYPE_UPDATE_RESP",
+      "GRIEVANCE_TYPE_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: type.id,
+    },
+  );
 }
 
 export function createTicket(ticket, grievanceConfig, clientMutationLabel) {

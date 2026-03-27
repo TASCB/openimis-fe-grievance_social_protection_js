@@ -41,6 +41,28 @@ function reducer(
     category: [],
     categoryPageInfo: { totalCount: 0 },
 
+    fetchingGrievanceCategories: false,
+    fetchedGrievanceCategories: false,
+    errorGrievanceCategories: null,
+    grievanceCategories: [],
+    grievanceCategoriesPageInfo: { totalCount: 0 },
+
+    fetchingGrievanceCategory: false,
+    fetchedGrievanceCategory: false,
+    errorGrievanceCategory: null,
+    grievanceCategory: null,
+
+    fetchingGrievanceTypes: false,
+    fetchedGrievanceTypes: false,
+    errorGrievanceTypes: null,
+    grievanceTypes: [],
+    grievanceTypesPageInfo: { totalCount: 0 },
+
+    fetchingGrievanceType: false,
+    fetchedGrievanceType: false,
+    errorGrievanceType: null,
+    grievanceType: null,
+
     fetchingTicketAttachments: false,
     fetchedTicketAttachments: false,
     errorTicketAttachments: null,
@@ -169,6 +191,124 @@ function reducer(
         fetching: false,
         error: formatServerError(action.payload),
       };
+    case "GRIEVANCE_CATEGORY_CATEGORIES_REQ":
+      return {
+        ...state,
+        fetchingGrievanceCategories: true,
+        fetchedGrievanceCategories: false,
+        grievanceCategories: [],
+        grievanceCategoriesPageInfo: { totalCount: 0 },
+        errorGrievanceCategories: null,
+      };
+    case "GRIEVANCE_CATEGORY_CATEGORIES_RESP":
+      return {
+        ...state,
+        fetchingGrievanceCategories: false,
+        fetchedGrievanceCategories: true,
+        grievanceCategories: parseData(action.payload.data.grievanceCategories).map((category) => ({
+          ...category,
+          id: decodeId(category.id),
+          type: category.type
+            ? { ...category.type, id: decodeId(category.type.id) }
+            : null,
+        })),
+        grievanceCategoriesPageInfo: pageInfo(action.payload.data.grievanceCategories),
+        errorGrievanceCategories: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_CATEGORY_CATEGORIES_ERR":
+      return {
+        ...state,
+        fetchingGrievanceCategories: false,
+        grievanceCategories: [],
+        errorGrievanceCategories: formatServerError(action.payload),
+      };
+    case "GRIEVANCE_CATEGORY_CATEGORY_REQ":
+      return {
+        ...state,
+        fetchingGrievanceCategory: true,
+        fetchedGrievanceCategory: false,
+        grievanceCategory: null,
+        errorGrievanceCategory: null,
+      };
+    case "GRIEVANCE_CATEGORY_CATEGORY_RESP":
+      return {
+        ...state,
+        fetchingGrievanceCategory: false,
+        fetchedGrievanceCategory: true,
+        grievanceCategory: parseData(action.payload.data.grievanceCategories)
+          .map((category) => ({
+            ...category,
+            id: decodeId(category.id),
+            type: category.type
+              ? { ...category.type, id: decodeId(category.type.id) }
+              : null,
+          }))
+          ?.[0],
+        errorGrievanceCategory: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_CATEGORY_CATEGORY_ERR":
+      return {
+        ...state,
+        fetchingGrievanceCategory: false,
+        grievanceCategory: null,
+        errorGrievanceCategory: formatServerError(action.payload),
+      };
+    case "GRIEVANCE_TYPE_TYPES_REQ":
+      return {
+        ...state,
+        fetchingGrievanceTypes: true,
+        fetchedGrievanceTypes: false,
+        grievanceTypes: [],
+        grievanceTypesPageInfo: { totalCount: 0 },
+        errorGrievanceTypes: null,
+      };
+    case "GRIEVANCE_TYPE_TYPES_RESP":
+      return {
+        ...state,
+        fetchingGrievanceTypes: false,
+        fetchedGrievanceTypes: true,
+        grievanceTypes: parseData(action.payload.data.grievanceTypes).map((type) => ({
+          ...type,
+          id: decodeId(type.id),
+        })),
+        grievanceTypesPageInfo: pageInfo(action.payload.data.grievanceTypes),
+        errorGrievanceTypes: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_TYPE_TYPES_ERR":
+      return {
+        ...state,
+        fetchingGrievanceTypes: false,
+        grievanceTypes: [],
+        errorGrievanceTypes: formatServerError(action.payload),
+      };
+    case "GRIEVANCE_TYPE_TYPE_REQ":
+      return {
+        ...state,
+        fetchingGrievanceType: true,
+        fetchedGrievanceType: false,
+        grievanceType: null,
+        errorGrievanceType: null,
+      };
+    case "GRIEVANCE_TYPE_TYPE_RESP":
+      return {
+        ...state,
+        fetchingGrievanceType: false,
+        fetchedGrievanceType: true,
+        grievanceType: parseData(action.payload.data.grievanceTypes)
+          .map((type) => ({
+            ...type,
+            id: decodeId(type.id),
+          }))
+          ?.[0],
+        errorGrievanceType: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_TYPE_TYPE_ERR":
+      return {
+        ...state,
+        fetchingGrievanceType: false,
+        grievanceType: null,
+        errorGrievanceType: formatServerError(action.payload),
+      };
     case "TICKET_TICKET_ATTACHMENTS_REQ":
       return {
         ...state,
@@ -257,6 +397,22 @@ function reducer(
       return dispatchMutationResp(state, "updateTicket", action);
     case "TICKET_DELETE_TICKET_RESP":
       return dispatchMutationResp(state, "deleteTicket", action);
+    case "GRIEVANCE_CATEGORY_MUTATION_REQ":
+      return dispatchMutationReq(state, action);
+    case "GRIEVANCE_CATEGORY_MUTATION_ERR":
+      return dispatchMutationErr(state, action);
+    case "GRIEVANCE_CATEGORY_CREATE_RESP":
+      return dispatchMutationResp(state, "createGrievanceCategory", action);
+    case "GRIEVANCE_CATEGORY_UPDATE_RESP":
+      return dispatchMutationResp(state, "updateGrievanceCategory", action);
+    case "GRIEVANCE_TYPE_MUTATION_REQ":
+      return dispatchMutationReq(state, action);
+    case "GRIEVANCE_TYPE_MUTATION_ERR":
+      return dispatchMutationErr(state, action);
+    case "GRIEVANCE_TYPE_CREATE_RESP":
+      return dispatchMutationResp(state, "createGrievanceType", action);
+    case "GRIEVANCE_TYPE_UPDATE_RESP":
+      return dispatchMutationResp(state, "updateGrievanceType", action);
     case "TICKET_ATTACHMENT_MUTATION_REQ":
       return dispatchMutationReq(state, action);
     case "TICKET_ATTACHMENT_MUTATION_ERR":

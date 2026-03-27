@@ -20,17 +20,28 @@ import { MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_SEARCH } from "./constants"
 import TicketTypePicker from "./pickers/TicketTypePicker";
 import TicketCategoryPicker from "./pickers/TicketCategoryPicker";
 import TicketTypesPage from "./pages/TicketTypesPage";
-import TicketTypeSearcher from "./components/TicketTypeSearcher";
+import GrievanceTypesSearcher from "./components/GrievanceTypesSearcher";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
 import TicketReportPage from "./pages/TicketReportPage";
+import CreateTicketCategoryPage from "./pages/CreateTicketCategoryPage";
+import ViewTicketCategoryPage from "./pages/ViewTicketCategoryPage";
+import EditTicketCategoryPage from "./pages/EditTicketCategoryPage";
+import CreateTicketTypePage from "./pages/CreateTicketTypePage";
+import ViewTicketTypePage from "./pages/ViewTicketTypePage";
+import EditTicketTypePage from "./pages/EditTicketTypePage";
+import GrievanceTypePicker from "./pickers/GrievanceTypePicker";
 
 const ROUTE_TICKET_TICKETS = "ticket/tickets";
 const ROUTE_TICKET_TICKET = "ticket/ticket";
 const ROUTE_TICKET_NEW_TICKET = "ticket/newTicket";
 const ROUTE_TICKET_TYPES = "ticket/types";
 const ROUTE_TICKET_TYPES_CREATE = "ticket/types/create";
+const ROUTE_TICKET_TYPE = "ticket/types/type";
+const ROUTE_TICKET_TYPE_EDIT = "ticket/types/type/edit";
 const ROUTE_TICKET_CATEGORIES = "ticket/categories";
 const ROUTE_TICKET_CATEGORIES_CREATE = "ticket/categories/create";
+const ROUTE_TICKET_CATEGORY = "ticket/categories/category";
+const ROUTE_TICKET_CATEGORY_EDIT = "ticket/categories/category/edit";
 const ROUTE_TICKET_REPORTS = "ticket/reports";
 
 const DEFAULT_CONFIG = {
@@ -60,12 +71,40 @@ const DEFAULT_CONFIG = {
       ref: ROUTE_TICKET_TYPES,
     },
     {
+      key: "grievanceSocialProtection.route.ticketTypeCreate",
+      ref: ROUTE_TICKET_TYPES_CREATE,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketType",
+      ref: ROUTE_TICKET_TYPE,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketTypeEdit",
+      ref: ROUTE_TICKET_TYPE_EDIT,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketCategories",
+      ref: ROUTE_TICKET_CATEGORIES,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketCategoryCreate",
+      ref: ROUTE_TICKET_CATEGORIES_CREATE,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketCategory",
+      ref: ROUTE_TICKET_CATEGORY,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketCategoryEdit",
+      ref: ROUTE_TICKET_CATEGORY_EDIT,
+    },
+    {
       key: "grievanceSocialProtection.route.ticketSearcher",
       ref: TicketSearcher,
     },
     {
       key: "grievanceSocialProtection.route.ticketTypeSearcher",
-      ref: TicketTypeSearcher,
+      ref: GrievanceTypesSearcher,
     },
     {
       key: "grievanceSocialProtection.TicketTypePicker",
@@ -103,15 +142,23 @@ const DEFAULT_CONFIG = {
       key: "grievanceSocialProtection.GrievanceConfigurationDialog",
       ref: GrievanceConfigurationDialog,
     },
+    {
+      key: "grievanceSocialProtection.GrievanceTypePicker",
+      ref: GrievanceTypePicker,
+    },
   ],
   "core.Router": [
     { path: `${ROUTE_TICKET_TICKETS}`, component: TicketsPage },
     { path: `${ROUTE_TICKET_TICKET}/:ticket_uuid?/:version?`, component: TicketPage },
     { path: `${ROUTE_TICKET_NEW_TICKET}`, component: TicketPage },
     { path: `${ROUTE_TICKET_TYPES}`, component: TicketTypesPage },
-    { path: `${ROUTE_TICKET_TYPES_CREATE}`, component: TicketTypesPage },
+    { path: `${ROUTE_TICKET_TYPES_CREATE}`, component: CreateTicketTypePage },
+    { path: `${ROUTE_TICKET_TYPE}/:type_id`, component: ViewTicketTypePage },
+    { path: `${ROUTE_TICKET_TYPE_EDIT}/:type_id`, component: EditTicketTypePage },
     { path: `${ROUTE_TICKET_CATEGORIES}`, component: TicketCategoriesPage },
-    { path: `${ROUTE_TICKET_CATEGORIES_CREATE}`, component: TicketCategoriesPage },
+    { path: `${ROUTE_TICKET_CATEGORIES_CREATE}`, component: CreateTicketCategoryPage },
+    { path: `${ROUTE_TICKET_CATEGORY}/:category_id`, component: ViewTicketCategoryPage },
+    { path: `${ROUTE_TICKET_CATEGORY_EDIT}/:category_id`, component: EditTicketCategoryPage },
     { path: `${ROUTE_TICKET_REPORTS}`, component: TicketReportPage },
   ],
   "core.MainMenu": [
