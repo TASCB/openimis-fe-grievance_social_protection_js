@@ -184,7 +184,7 @@ const TicketReportFilter = (props) => {
                   {
                     id: "channel",
                     value: v,
-                    filter: `status_Icontains: ${v}`,
+                    filter: `channel_Icontains: "${v}"`,
                   },
                 ])
               }

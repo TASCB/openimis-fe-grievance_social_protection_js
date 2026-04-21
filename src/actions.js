@@ -42,6 +42,7 @@ const GRIEVANCE_TYPE_PROJECTION = () => [
 ];
 
 const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "isActive"];
+const GRIEVANCE_CHANNEL_PROJECTION = () => ["id", "code", "name", "isActive"];
 
 export function fetchCategoryForPicker(mm, filters) {
   const payload = formatPageQueryWithCount("category", filters, CATEGORY_FULL_PROJECTION(mm));
@@ -74,6 +75,24 @@ export function fetchGrievanceTypes(mm, filters = []) {
 export function fetchGrievanceType(mm, filters = []) {
   const payload = formatPageQueryWithCount("grievanceTypes", filters, GRIEVANCE_TYPE_PROJECTION(mm));
   return graphql(payload, "GRIEVANCE_TYPE_TYPE");
+}
+
+export function fetchGrievanceChannels(mm, filters = []) {
+  const payload = formatPageQueryWithCount(
+    "grievanceChannels",
+    filters,
+    GRIEVANCE_CHANNEL_PROJECTION(mm),
+  );
+  return graphql(payload, "GRIEVANCE_CHANNEL_CHANNELS");
+}
+
+export function fetchGrievanceChannel(mm, filters = []) {
+  const payload = formatPageQueryWithCount(
+    "grievanceChannels",
+    filters,
+    GRIEVANCE_CHANNEL_PROJECTION(mm),
+  );
+  return graphql(payload, "GRIEVANCE_CHANNEL_CHANNEL");
 }
 
 export function fetchTicketSummaries(mm, filters) {
@@ -245,6 +264,15 @@ export function formatGrievanceTypeGQL(type) {
   `;
 }
 
+export function formatGrievanceChannelGQL(channel) {
+  return `
+    ${channel.id ? `id: "${formatGQLString(channel.id)}"` : ""}
+    ${channel.code ? `code: "${formatGQLString(channel.code)}"` : ""}
+    ${channel.name ? `name: "${formatGQLString(channel.name)}"` : ""}
+    ${typeof channel.isActive === "boolean" ? `isActive: ${channel.isActive}` : ""}
+  `;
+}
+
 export function createGrievanceCategory(category, clientMutationLabel) {
   const mutation = formatMutation(
     "createGrievanceCategory",
@@ -335,6 +363,51 @@ export function updateGrievanceType(type, clientMutationLabel) {
   );
 }
 
+export function createGrievanceChannel(channel, clientMutationLabel) {
+  const mutation = formatMutation(
+    "createGrievanceChannel",
+    formatGrievanceChannelGQL(channel),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CHANNEL_MUTATION_REQ",
+      "GRIEVANCE_CHANNEL_CREATE_RESP",
+      "GRIEVANCE_CHANNEL_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function updateGrievanceChannel(channel, clientMutationLabel) {
+  const mutation = formatMutation(
+    "updateGrievanceChannel",
+    formatGrievanceChannelGQL(channel),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CHANNEL_MUTATION_REQ",
+      "GRIEVANCE_CHANNEL_UPDATE_RESP",
+      "GRIEVANCE_CHANNEL_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: channel.id,
+    },
+  );
+}
+
 export function deleteGrievanceCategory(category, clientMutationLabel) {
   const mutation = formatMutation(
     "deleteGrievanceCategory",
@@ -377,6 +450,29 @@ export function deleteGrievanceType(type, clientMutationLabel) {
       clientMutationLabel,
       requestedDateTime,
       id: type.id,
+    },
+  );
+}
+
+export function deleteGrievanceChannel(channel, clientMutationLabel) {
+  const mutation = formatMutation(
+    "deleteGrievanceChannel",
+    `ids: ["${channel.id}"]`,
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CHANNEL_MUTATION_REQ",
+      "GRIEVANCE_CHANNEL_DELETE_RESP",
+      "GRIEVANCE_CHANNEL_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: channel.id,
     },
   );
 }

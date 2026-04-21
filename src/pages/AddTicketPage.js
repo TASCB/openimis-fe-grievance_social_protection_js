@@ -31,7 +31,6 @@ class AddTicketPage extends Component {
       selectedType: null,
       stateEdited: {
         flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
-        channel: "Web",
       },
     };
   }

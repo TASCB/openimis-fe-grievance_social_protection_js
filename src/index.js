@@ -20,6 +20,7 @@ import { MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_SEARCH } from "./constants"
 import TicketTypePicker from "./pickers/TicketTypePicker";
 import TicketCategoryPicker from "./pickers/TicketCategoryPicker";
 import TicketTypesPage from "./pages/TicketTypesPage";
+import TicketChannelsPage from "./pages/TicketChannelsPage";
 import GrievanceTypesSearcher from "./components/GrievanceTypesSearcher";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
 import TicketReportPage from "./pages/TicketReportPage";
@@ -29,6 +30,9 @@ import EditTicketCategoryPage from "./pages/EditTicketCategoryPage";
 import CreateTicketTypePage from "./pages/CreateTicketTypePage";
 import ViewTicketTypePage from "./pages/ViewTicketTypePage";
 import EditTicketTypePage from "./pages/EditTicketTypePage";
+import CreateTicketChannelPage from "./pages/CreateTicketChannelPage";
+import ViewTicketChannelPage from "./pages/ViewTicketChannelPage";
+import EditTicketChannelPage from "./pages/EditTicketChannelPage";
 import GrievanceTypePicker from "./pickers/GrievanceTypePicker";
 import GrievanceCategoryPicker from "./pickers/GrievanceCategoryPicker";
 
@@ -39,6 +43,10 @@ const ROUTE_TICKET_TYPES = "ticket/types";
 const ROUTE_TICKET_TYPES_CREATE = "ticket/types/create";
 const ROUTE_TICKET_TYPE = "ticket/types/type";
 const ROUTE_TICKET_TYPE_EDIT = "ticket/types/type/edit";
+const ROUTE_TICKET_CHANNELS = "ticket/channels";
+const ROUTE_TICKET_CHANNELS_CREATE = "ticket/channels/create";
+const ROUTE_TICKET_CHANNEL = "ticket/channels/channel";
+const ROUTE_TICKET_CHANNEL_EDIT = "ticket/channels/channel/edit";
 const ROUTE_TICKET_CATEGORIES = "ticket/categories";
 const ROUTE_TICKET_CATEGORIES_CREATE = "ticket/categories/create";
 const ROUTE_TICKET_CATEGORY = "ticket/categories/category";
@@ -86,6 +94,22 @@ const DEFAULT_CONFIG = {
     {
       key: "grievanceSocialProtection.route.ticketCategories",
       ref: ROUTE_TICKET_CATEGORIES,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketChannels",
+      ref: ROUTE_TICKET_CHANNELS,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketChannelCreate",
+      ref: ROUTE_TICKET_CHANNELS_CREATE,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketChannel",
+      ref: ROUTE_TICKET_CHANNEL,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketChannelEdit",
+      ref: ROUTE_TICKET_CHANNEL_EDIT,
     },
     {
       key: "grievanceSocialProtection.route.ticketCategoryCreate",
@@ -160,6 +184,10 @@ const DEFAULT_CONFIG = {
     { path: `${ROUTE_TICKET_TYPES_CREATE}`, component: CreateTicketTypePage },
     { path: `${ROUTE_TICKET_TYPE}/:type_id`, component: ViewTicketTypePage },
     { path: `${ROUTE_TICKET_TYPE_EDIT}/:type_id`, component: EditTicketTypePage },
+    { path: `${ROUTE_TICKET_CHANNELS}`, component: TicketChannelsPage },
+    { path: `${ROUTE_TICKET_CHANNELS_CREATE}`, component: CreateTicketChannelPage },
+    { path: `${ROUTE_TICKET_CHANNEL}/:channel_id`, component: ViewTicketChannelPage },
+    { path: `${ROUTE_TICKET_CHANNEL_EDIT}/:channel_id`, component: EditTicketChannelPage },
     { path: `${ROUTE_TICKET_CATEGORIES}`, component: TicketCategoriesPage },
     { path: `${ROUTE_TICKET_CATEGORIES_CREATE}`, component: CreateTicketCategoryPage },
     { path: `${ROUTE_TICKET_CATEGORY}/:category_id`, component: ViewTicketCategoryPage },
@@ -194,6 +222,13 @@ const DEFAULT_CONFIG = {
       route: `/${ROUTE_TICKET_TYPES}`,
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
       id: "grievance.types",
+    },
+    {
+      text: "Channels",
+      icon: <ListAlt />,
+      route: `/${ROUTE_TICKET_CHANNELS}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.channels",
     },
     {
       text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.grievances" />,

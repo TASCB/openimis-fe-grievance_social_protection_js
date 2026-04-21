@@ -63,6 +63,17 @@ function reducer(
     errorGrievanceType: null,
     grievanceType: null,
 
+    fetchingGrievanceChannels: false,
+    fetchedGrievanceChannels: false,
+    errorGrievanceChannels: null,
+    grievanceChannels: [],
+    grievanceChannelsPageInfo: { totalCount: 0 },
+
+    fetchingGrievanceChannel: false,
+    fetchedGrievanceChannel: false,
+    errorGrievanceChannel: null,
+    grievanceChannel: null,
+
     fetchingTicketAttachments: false,
     fetchedTicketAttachments: false,
     errorTicketAttachments: null,
@@ -303,6 +314,61 @@ function reducer(
         grievanceType: null,
         errorGrievanceType: formatServerError(action.payload),
       };
+    case "GRIEVANCE_CHANNEL_CHANNELS_REQ":
+      return {
+        ...state,
+        fetchingGrievanceChannels: true,
+        fetchedGrievanceChannels: false,
+        grievanceChannels: [],
+        grievanceChannelsPageInfo: { totalCount: 0 },
+        errorGrievanceChannels: null,
+      };
+    case "GRIEVANCE_CHANNEL_CHANNELS_RESP":
+      return {
+        ...state,
+        fetchingGrievanceChannels: false,
+        fetchedGrievanceChannels: true,
+        grievanceChannels: parseData(action.payload.data.grievanceChannels).map((channel) => ({
+          ...channel,
+          id: decodeId(channel.id),
+        })),
+        grievanceChannelsPageInfo: pageInfo(action.payload.data.grievanceChannels),
+        errorGrievanceChannels: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_CHANNEL_CHANNELS_ERR":
+      return {
+        ...state,
+        fetchingGrievanceChannels: false,
+        grievanceChannels: [],
+        errorGrievanceChannels: formatServerError(action.payload),
+      };
+    case "GRIEVANCE_CHANNEL_CHANNEL_REQ":
+      return {
+        ...state,
+        fetchingGrievanceChannel: true,
+        fetchedGrievanceChannel: false,
+        grievanceChannel: null,
+        errorGrievanceChannel: null,
+      };
+    case "GRIEVANCE_CHANNEL_CHANNEL_RESP":
+      return {
+        ...state,
+        fetchingGrievanceChannel: false,
+        fetchedGrievanceChannel: true,
+        grievanceChannel: parseData(action.payload.data.grievanceChannels)
+          .map((channel) => ({
+            ...channel,
+            id: decodeId(channel.id),
+          }))?.[0],
+        errorGrievanceChannel: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_CHANNEL_CHANNEL_ERR":
+      return {
+        ...state,
+        fetchingGrievanceChannel: false,
+        grievanceChannel: null,
+        errorGrievanceChannel: formatServerError(action.payload),
+      };
     case "TICKET_TICKET_ATTACHMENTS_REQ":
       return {
         ...state,
@@ -411,6 +477,16 @@ function reducer(
       return dispatchMutationResp(state, "updateGrievanceType", action);
     case "GRIEVANCE_TYPE_DELETE_RESP":
       return dispatchMutationResp(state, "deleteGrievanceType", action);
+    case "GRIEVANCE_CHANNEL_MUTATION_REQ":
+      return dispatchMutationReq(state, action);
+    case "GRIEVANCE_CHANNEL_MUTATION_ERR":
+      return dispatchMutationErr(state, action);
+    case "GRIEVANCE_CHANNEL_CREATE_RESP":
+      return dispatchMutationResp(state, "createGrievanceChannel", action);
+    case "GRIEVANCE_CHANNEL_UPDATE_RESP":
+      return dispatchMutationResp(state, "updateGrievanceChannel", action);
+    case "GRIEVANCE_CHANNEL_DELETE_RESP":
+      return dispatchMutationResp(state, "deleteGrievanceChannel", action);
     case "TICKET_ATTACHMENT_MUTATION_REQ":
       return dispatchMutationReq(state, action);
     case "TICKET_ATTACHMENT_MUTATION_ERR":
