@@ -1,6 +1,8 @@
 import React from "react";
 import { Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
 
+const PAGE_SIZE = 100;
+
 const GRAPHQL_QUERY = `
   query GetGrievanceTypes($first: Int) {
     grievanceTypes(isActive: true, first: $first) {
@@ -19,7 +21,7 @@ const GRAPHQL_QUERY = `
 export default function GrievanceTypePicker({ onChange, value, readOnly, ...props }) {
   const { isLoading, data, error } = useGraphqlQuery(
     GRAPHQL_QUERY,
-    { first: 200 },
+    { first: PAGE_SIZE },
     { skip: false },
   );
 
