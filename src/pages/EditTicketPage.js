@@ -289,6 +289,15 @@ class EditTicketPage extends Component {
               <Divider />
               <Grid container className={classes.item}>
                 <Grid item xs={6} className={classes.item}>
+                  <PublishedComponent
+                    pubRef="grievanceSocialProtection.DropDownCategoryPicker"
+                    value={stateEdited.category}
+                    onChange={(v) => this.updateAttribute('category', v)}
+                    required
+                    readOnly={propsReadOnly}
+                  />
+                </Grid>
+                <Grid item xs={6} className={classes.item}>
                   <TextInput
                     label="ticket.title"
                     value={stateEdited.title}
@@ -309,28 +318,10 @@ class EditTicketPage extends Component {
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.DropDownCategoryPicker"
-                    value={stateEdited.category}
-                    onChange={(v) => this.updateAttribute('category', v)}
-                    required
-                    readOnly={propsReadOnly}
-                  />
-                </Grid>
-                <Grid item xs={6} className={classes.item}>
-                  <PublishedComponent
-                    pubRef="grievanceSocialProtection.FlagPicker"
-                    value={stateEdited.flags}
-                    onChange={(v) => this.updateAttribute('flags', v)}
-                    required
-                    readOnly={propsReadOnly}
-                  />
-                </Grid>
-                <Grid item xs={6} className={classes.item}>
-                  <PublishedComponent
-                    pubRef="grievanceSocialProtection.ChannelPicker"
-                    value={stateEdited.channel}
-                    onChange={(v) => this.updateAttribute('channel', v)}
-                    required
+                    pubRef="grievanceSocialProtection.TicketStatusPicker"
+                    value={stateEdited.status}
+                    onChange={(v) => this.updateAttribute('status', v)}
+                    required={false}
                     readOnly={propsReadOnly}
                   />
                 </Grid>
@@ -345,6 +336,15 @@ class EditTicketPage extends Component {
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
+                    pubRef="grievanceSocialProtection.ChannelPicker"
+                    value={stateEdited.channel}
+                    onChange={(v) => this.updateAttribute('channel', v)}
+                    required
+                    readOnly={propsReadOnly}
+                  />
+                </Grid>
+                <Grid item xs={6} className={classes.item}>
+                  <PublishedComponent
                     pubRef="admin.UserPicker"
                     value={stateEdited.attendingStaff}
                     module="core"
@@ -354,10 +354,10 @@ class EditTicketPage extends Component {
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.TicketStatusPicker"
-                    value={stateEdited.status}
-                    onChange={(v) => this.updateAttribute('status', v)}
-                    required={false}
+                    pubRef="grievanceSocialProtection.FlagPicker"
+                    value={stateEdited.flags}
+                    onChange={(v) => this.updateAttribute('flags', v)}
+                    required
                     readOnly={propsReadOnly}
                   />
                 </Grid>

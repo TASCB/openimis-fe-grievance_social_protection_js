@@ -72,7 +72,7 @@
     "action.AddTicket.tooltip":"Add Grievance",
     "addNewticketTooltip":"Add Grievance",
     "ticket.resolution":"RESOLUTION",
-    "ticket.title":"Grievance Title",
+    "ticket.title":"Type",
     "Ticket Status.Waiting":"Waiting",
     "Ticket Status.Todo":"Todo",
     "Ticket Status.Inprogress":"Inprogress",
