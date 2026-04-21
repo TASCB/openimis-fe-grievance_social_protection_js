@@ -236,6 +236,31 @@ export function formatUpdateTicketGQL(ticket) {
   `;
 }
 
+export function formatCloseTicketGQL(ticket, closingComment, commenter, commenterType) {
+  return `
+    ${ticket.id !== undefined && ticket.id !== null ? `id: "${ticket.id}"` : ""}
+    ${!!ticket.category && !!ticket.category ? `category: "${ticket.category}"` : ""}
+    ${!!ticket.title && !!ticket.title ? `title: "${formatGQLString(ticket.title)}"` : ""}
+    ${!!ticket.description && !!ticket.description ? `description: "${formatGQLString(ticket.description)}"` : ""}
+    ${!!ticket.attendingStaff && !!ticket.attendingStaff ? `attendingStaffId: "${decodeId(ticket.attendingStaff.id)}"` : ""}
+    ${ticket.resolution ? `resolution: "${formatGQLString(ticket.resolution)}"` : ""}
+    ${ticket.priority ? `priority: "${formatGQLString(ticket.priority)}"` : ""}
+    ${ticket.dueDate ? `dueDate: "${formatGQLString(ticket.dueDate)}"` : ""}
+    ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
+    ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
+    ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
+    ${
+      commenter
+        ? isBase64Encoded(commenter.id)
+          ? `commenterId: "${decodeId(commenter.id)}"`
+          : `commenterId: "${commenter.id}"`
+        : ""
+    }
+    ${commenterType ? `commenterType: "${commenterType}"` : ""}
+    ${closingComment ? `comment: "${formatGQLString(closingComment)}"` : ""}
+  `;
+}
+
 export function resolveTicketGQL(ticket) {
   return `
     ${ticket.uuid !== undefined && ticket.uuid !== null ? `uuid: "${ticket.uuid}"` : ""}
@@ -571,7 +596,13 @@ export function formatTicketCommentGQL(ticketComment, ticket, commenterType) {
   return `
     ${ticketComment.uuid !== undefined && ticketComment.uuid !== null ? `uuid: "${ticketComment.uuid}"` : ""}
     ${ticket.id ? `ticketId: "${ticket.id}"` : ""}
-    ${ticketComment.commenter ? `commenterId: "${decodeId(ticketComment.commenter.id)}"` : ""}
+    ${
+      ticketComment.commenter
+        ? isBase64Encoded(ticketComment.commenter.id)
+          ? `commenterId: "${decodeId(ticketComment.commenter.id)}"`
+          : `commenterId: "${ticketComment.commenter.id}"`
+        : ""
+    }
     ${commenterType ? `commenterType: "${commenterType}"` : ""}
     ${ticketComment.comment ? `comment: "${formatGQLString(ticketComment.comment)}"` : ""}
   `;
@@ -629,6 +660,28 @@ export function resolveGrievanceByComment(id, clientMutationLabel) {
     [
       REQUEST(ACTION_TYPE.MUTATION),
       SUCCESS(ACTION_TYPE.RESOLVE_BY_COMMENT),
+      ERROR(ACTION_TYPE.MUTATION),
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    },
+  );
+}
+
+export function closeTicket(ticket, closingComment, commenter, commenterType, clientMutationLabel) {
+  const mutation = formatMutation(
+    "closeTicket",
+    formatCloseTicketGQL(ticket, closingComment, commenter, commenterType),
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      REQUEST(ACTION_TYPE.MUTATION),
+      SUCCESS(ACTION_TYPE.CLOSE_TICKET),
       ERROR(ACTION_TYPE.MUTATION),
     ],
     {

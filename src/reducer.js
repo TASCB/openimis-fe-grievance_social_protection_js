@@ -16,6 +16,7 @@ import { CLEAR, ERROR, REQUEST, SUCCESS } from "./utils/action-type";
 export const ACTION_TYPE = {
   GET_GRIEVANCE_CONFIGURATION: "GET_GRIEVANCE_CONFIGURATION",
   MUTATION: "GRIEVANCE_SOCIAL_PROTECTION_MUTATION",
+  CLOSE_TICKET: "CLOSE_TICKET",
   RESOLVE_BY_COMMENT: "RESOLVE_BY_COMMENT",
   REOPEN_TICKET: "REOPEN_TICKET",
   CLEAR_TICKET: "CLEAR_TICKET",
@@ -445,6 +446,8 @@ function reducer(
       return dispatchMutationErr(state, action);
     case SUCCESS(ACTION_TYPE.RESOLVE_BY_COMMENT):
       return dispatchMutationResp(state, "resolveGrievanceByComment", action);
+    case SUCCESS(ACTION_TYPE.CLOSE_TICKET):
+      return dispatchMutationResp(state, "closeTicket", action);
     case SUCCESS(ACTION_TYPE.REOPEN_TICKET):
       return dispatchMutationResp(state, "reopenTicket", action);
     case "TICKET_MUTATION_REQ":

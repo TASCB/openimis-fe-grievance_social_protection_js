@@ -171,10 +171,23 @@ class TicketCommentPanel extends Component {
 
   isReadOnly = () => this.props?.ticket?.status === TICKET_STATUSES.CLOSED || this.props?.ticket?.isHistory;
 
+  getTicketCommentIds = () => {
+    const jsonExt = this.props.ticket?.jsonExt;
+    if (!jsonExt) return null;
+    if (typeof jsonExt === 'string') {
+      try {
+        return JSON.parse(jsonExt)?.comment_ids ?? null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return jsonExt.comment_ids ?? null;
+  };
+
   filterComments = (comments) => {
     if (!comments) return comments;
-    const jsonExt = this.props.ticket?.jsonExt;
-    const commentIds = jsonExt ? JSON.parse(jsonExt)?.comment_ids : null;
+    if (!this.props.ticket?.isHistory) return comments;
+    const commentIds = this.getTicketCommentIds();
     if (!commentIds) return [];
     return comments.filter((comment) => commentIds.includes(comment.id));
   };

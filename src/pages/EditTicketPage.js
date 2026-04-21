@@ -30,7 +30,7 @@ import {
 } from '@openimis/fe-core';
 import _ from 'lodash';
 import { Save } from '@material-ui/icons';
-import { updateTicket, fetchTicket, createTicketComment } from '../actions';
+import { closeTicket, updateTicket, fetchTicket } from '../actions';
 import { EMPTY_STRING, MODULE_NAME, TICKET_STATUSES } from '../constants';
 import TicketPrintTemplate from '../components/TicketPrintTemplate';
 
@@ -102,13 +102,13 @@ class EditTicketPage extends Component {
     const { stateEdited, closingComment } = this.state;
     if (!closingComment || !closingComment.trim()) return;
 
-    this.props.createTicketComment(
-      { comment: closingComment.trim(), commenter: user },
+    this.props.closeTicket(
       stateEdited,
+      closingComment.trim(),
+      user,
       'user',
-      `Closing comment for ticket ${stateEdited.code}`,
+      `Closed ticket ${stateEdited.code}`,
     );
-    this.persistTicket();
     this.setState({ closingDialogOpen: false, closingComment: EMPTY_STRING });
   };
 
@@ -477,12 +477,12 @@ const mapStateToProps = (state, props) => ({
   ticket: state.grievanceSocialProtection.ticket,
   grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
   comments: state.grievanceSocialProtection.ticketComments,
-  user: state.core?.user?.i_user ?? null,
+  user: state.core?.user ?? null,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(
   {
-    fetchTicket, updateTicket, createTicketComment, journalize,
+    fetchTicket, updateTicket, closeTicket, journalize,
   },
   dispatch,
 );
