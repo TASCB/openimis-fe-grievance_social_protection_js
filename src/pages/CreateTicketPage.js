@@ -28,7 +28,7 @@ function CreateTicketPage({
   createTicket,
   journalize,
 }) {
-  const [stateEdited, setStateEdited] = useState({});
+  const [stateEdited, setStateEdited] = useState({ channel: "Web", priority: "Low" });
   const [grievantType, setGrievantType] = useState(null);
   const [benefitPlan, setBenefitPlan] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -289,19 +289,10 @@ function CreateTicketPage({
 
               <Grid item xs={6}>
                 <PublishedComponent
-                  pubRef="grievanceSocialProtection.FlagPicker"
-                  value={stateEdited.flags}
-                  onChange={(v) => updateAttribute("flags", v)}
-                  readOnly={isSaved}
-                />
-              </Grid>
-
-              <Grid item xs={6}>
-                <PublishedComponent
                   pubRef="grievanceSocialProtection.ChannelPicker"
                   value={stateEdited.channel}
                   onChange={(v) => updateAttribute("channel", v)}
-                  readOnly={isSaved}
+                  readOnly
                 />
               </Grid>
 
@@ -333,7 +324,6 @@ function CreateTicketPage({
                   disabled={
                     !stateEdited.category ||
                     !stateEdited.channel ||
-                    !stateEdited.flags ||
                     !stateEdited.title ||
                     isSaved ||
                     ((stateEdited.reporterType === "individual" ||

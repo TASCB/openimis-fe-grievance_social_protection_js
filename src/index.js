@@ -237,13 +237,6 @@ const DEFAULT_CONFIG = {
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
       id: "grievance.grievances",
     },
-    {
-      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.add" />,
-      icon: <AddCircleOutline />,
-      route: `/${ROUTE_TICKET_NEW_TICKET}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_ADD),
-      id: "grievance.add",
-    },
   ],
 };
 

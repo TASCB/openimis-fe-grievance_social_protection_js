@@ -333,7 +333,7 @@ class EditTicketPage extends Component {
                     value={stateEdited.priority}
                     onChange={(v) => this.updateAttribute('priority', v)}
                     required={false}
-                    readOnly={propsReadOnly}
+                    readOnly
                   />
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
@@ -342,7 +342,7 @@ class EditTicketPage extends Component {
                     value={stateEdited.channel}
                     onChange={(v) => this.updateAttribute('channel', v)}
                     required
-                    readOnly={propsReadOnly}
+                    readOnly
                   />
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
@@ -351,15 +351,6 @@ class EditTicketPage extends Component {
                     value={stateEdited.attendingStaff}
                     module="core"
                     onChange={(v) => this.updateAttribute('attendingStaff', v)}
-                    readOnly={propsReadOnly}
-                  />
-                </Grid>
-                <Grid item xs={6} className={classes.item}>
-                  <PublishedComponent
-                    pubRef="grievanceSocialProtection.FlagPicker"
-                    value={stateEdited.flags}
-                    onChange={(v) => this.updateAttribute('flags', v)}
-                    required
                     readOnly={propsReadOnly}
                   />
                 </Grid>

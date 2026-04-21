@@ -31,6 +31,8 @@ class AddTicketPage extends Component {
       selectedType: null,
       stateEdited: {
         flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
+        channel: "Web",
+        priority: "Low",
       },
     };
   }
@@ -374,21 +376,11 @@ class AddTicketPage extends Component {
 
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.FlagPicker"
-                    value={stateEdited.flags}
-                    onChange={(v) => this.updateAttribute("flags", v)}
-                    required
-                    readOnly={isSaved}
-                  />
-                </Grid>
-
-                <Grid item xs={6} className={classes.item}>
-                  <PublishedComponent
                     pubRef="grievanceSocialProtection.ChannelPicker"
                     value={stateEdited.channel}
                     onChange={(v) => this.updateAttribute("channel", v)}
                     required
-                    readOnly={isSaved}
+                    readOnly
                   />
                 </Grid>
 
@@ -430,7 +422,6 @@ class AddTicketPage extends Component {
                     disabled={
                       !stateEdited.category ||
                       !stateEdited.channel ||
-                      !stateEdited.flags ||
                       !stateEdited.title ||
                       isSaved ||
                       ((stateEdited.reporterType === "individual" ||
