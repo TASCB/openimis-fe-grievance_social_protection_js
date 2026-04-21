@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
 
 const GRAPHQL_QUERY = `
   query GetGrievanceCategories($first: Int) {
-    grievanceCategories(first: $first) {
+    grievanceCategories(isActive: true, first: $first) {
       edges {
         node {
           id
@@ -17,10 +17,11 @@ const GRAPHQL_QUERY = `
 `;
 
 export default function GrievanceCategoryPicker({ onChange, value, readOnly, required, ...props }) {
+  const [searchString, setSearchString] = useState(null);
   const { isLoading, data, error } = useGraphqlQuery(
     GRAPHQL_QUERY,
-    { first: 200 },
-    { skip: false },
+    { first: 200, searchString },
+    { skip: true, keepStale: true },
   );
 
   return (
@@ -34,11 +35,12 @@ export default function GrievanceCategoryPicker({ onChange, value, readOnly, req
       withLabel
       withPlaceholder
       readOnly={readOnly}
-      onInputChange={() => {}}
+      onInputChange={setSearchString}
       options={data?.grievanceCategories?.edges?.map(({ node }) => node) ?? []}
       isLoading={isLoading}
       value={value ?? null}
       getOptionLabel={(option) => option?.name || ""}
+      getOptionSelected={(option, selected) => option?.id === selected?.id}
       onChange={(option) => onChange(option, option?.name ?? null)}
     />
   );
