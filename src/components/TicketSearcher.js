@@ -11,6 +11,7 @@ import { withStyles, withTheme } from "@material-ui/core/styles";
 import {
   coreConfirm,
   formatMessageWithValues,
+  formatDateFromISO,
   journalize,
   Searcher,
   withHistory,
@@ -100,100 +101,96 @@ class TicketSearcher extends Component {
     return prms;
   };
 
-  headers = () => [
-    "tickets.code",
-    "tickets.category",
-    "tickets.type",
-    "tickets.status",
-    "ticket.dateOfIncident",
-    "tickets.beneficary",
-    "tickets.priority",
-    this.isShowHistory() ? "tickets.version" : "",
-  ];
+  headers = () => {
+    const base = [
+      "tickets.code",
+      "tickets.category",
+      "tickets.type",
+      "tickets.status",
+      "ticket.dateOfIncident",
+      "tickets.reporter",
+    ];
+    if (this.isShowHistory()) base.push("tickets.version");
+    return base;
+  };
 
-  sorts = () => [
-    ["code", true],
-    ["category", true],
-    ["category", true],
-    ["reporter_id", true],
-    ["priority", true],
-    ["status", true],
-    ["version", true],
-  ];
+  sorts = () => {
+    const base = [
+      ["code", true],
+      ["category", true],
+      ["title", true],
+      ["status", true],
+      ["dateOfIncident", true],
+      ["reporter_id", true],
+    ];
+    if (this.isShowHistory()) base.push(["version", true]);
+    return base;
+  };
+
+  renderReporter = (ticket) => {
+    const reporter =
+      typeof ticket.reporter === "object"
+        ? ticket.reporter
+        : JSON.parse(JSON.parse(ticket.reporter || "{}") || "{}");
+
+    if (ticket.reporterTypeName === "individual") {
+      return (
+        <PublishedComponent
+          pubRef="individual.IndividualPicker"
+          readOnly
+          withNull
+          label="ticket.reporter"
+          required
+          value={reporter && !isEmptyObject(reporter) ? reporter : null}
+        />
+      );
+    }
+    if (ticket.reporterTypeName === "beneficiary") {
+      return (
+        <PublishedComponent
+          pubRef="socialProtection.BeneficiaryPicker"
+          readOnly
+          withNull
+          label="ticket.reporter"
+          required
+          value={{
+            individual: {
+              firstName: ticket.reporterFirstName,
+              lastName: ticket.reporterLastName,
+              dob: ticket.reporterDob,
+            },
+          }}
+        />
+      );
+    }
+    if (ticket.reporterTypeName === "user") {
+      return (
+        <PublishedComponent
+          pubRef="admin.UserPicker"
+          readOnly
+          value={reporter && !isEmptyObject(reporter) ? reporter : null}
+          module="core"
+          label="ticket.reporter"
+        />
+      );
+    }
+    return formatMessage(this.props.intl, MODULE_NAME, "anonymousUser");
+  };
 
   itemFormatters = () => {
+    const { intl, modulesManager } = this.props;
     const formatters = [
       (ticket) => ticket.code,
-      (ticket) => ticket.title,
-      (ticket) => {
-        const reporter =
-          typeof ticket.reporter === "object"
-            ? ticket.reporter
-            : JSON.parse(JSON.parse(ticket.reporter || "{}") || "{}");
-        let picker = "";
-        if (ticket.reporterTypeName === "individual") {
-          picker = (
-            <PublishedComponent
-              pubRef="individual.IndividualPicker"
-              readOnly
-              withNull
-              label="ticket.reporter"
-              required
-              value={
-                reporter !== undefined && reporter !== null
-                  ? isEmptyObject(reporter)
-                    ? null
-                    : reporter
-                  : null
-              }
-            />
-          );
-        }
-        if (ticket.reporterTypeName === "beneficiary") {
-          picker = (
-            <PublishedComponent
-              pubRef="socialProtection.BeneficiaryPicker"
-              readOnly
-              withNull
-              label="ticket.reporter"
-              required
-              value={{
-                individual: {
-                  firstName: ticket.reporterFirstName,
-                  lastName: ticket.reporterLastName,
-                  dob: ticket.reporterDob,
-                },
-              }}
-            />
-          );
-        }
-        if (ticket.reporterTypeName === "user") {
-          picker = (
-            <PublishedComponent
-              pubRef="admin.UserPicker"
-              readOnly
-              value={
-                reporter !== undefined && reporter !== null
-                  ? isEmptyObject(reporter)
-                    ? null
-                    : reporter
-                  : null
-              }
-              module="core"
-              label="ticket.reporter"
-            />
-          );
-        }
-        if (ticket.reporterTypeName === null) {
-          picker = `${formatMessage(this.props.intl, MODULE_NAME, "anonymousUser")}`;
-        }
-        return picker;
-      },
-      (ticket) => ticket.priority,
-      (ticket) => ticket.status,
       (ticket) => ticket.category,
-      (ticket) => (this.isShowHistory() ? ticket?.version : null),
+      (ticket) => ticket.title,
+      (ticket) => ticket.status,
+      (ticket) => (ticket.dateOfIncident ? formatDateFromISO(modulesManager, intl, ticket.dateOfIncident) : ""),
+      this.renderReporter,
     ];
+
+    if (this.isShowHistory()) {
+      formatters.push((ticket) => ticket?.version);
+    }
 
     if (this.props.rights.includes(RIGHT_TICKET_EDIT)) {
       formatters.push((ticket) => (
