@@ -35,7 +35,7 @@ function GrievanceCategoryFilter({ classes, filters, onChangeFilters, modulesMan
         module={MODULE_NAME}
         id="grievanceCategoryFilter.code"
         field={
-          <Grid item xs={12} sm={4} className={classes.item}>
+          <Grid item xs={12} sm={6} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label="grievanceCategory.code"
@@ -54,7 +54,7 @@ function GrievanceCategoryFilter({ classes, filters, onChangeFilters, modulesMan
         module={MODULE_NAME}
         id="grievanceCategoryFilter.name"
         field={
-          <Grid item xs={12} sm={4} className={classes.item}>
+          <Grid item xs={12} sm={6} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label="grievanceCategory.name"
@@ -63,25 +63,6 @@ function GrievanceCategoryFilter({ classes, filters, onChangeFilters, modulesMan
               onChange={(v) =>
                 debouncedOnChangeFilter([
                   { id: "name", value: v, filter: `name_Icontains: "${v}"` },
-                ])
-              }
-            />
-          </Grid>
-        }
-      />
-      <ControlledField
-        module={MODULE_NAME}
-        id="grievanceCategoryFilter.typeName"
-        field={
-          <Grid item xs={12} sm={4} className={classes.item}>
-            <TextInput
-              module={MODULE_NAME}
-              label="grievanceCategory.type"
-              name="typeName"
-              value={filterValue("typeName")}
-              onChange={(v) =>
-                debouncedOnChangeFilter([
-                  { id: "typeName", value: v, filter: `type_Name_Icontains: "${v}"` },
                 ])
               }
             />

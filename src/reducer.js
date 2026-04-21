@@ -208,9 +208,6 @@ function reducer(
         grievanceCategories: parseData(action.payload.data.grievanceCategories).map((category) => ({
           ...category,
           id: decodeId(category.id),
-          type: category.type
-            ? { ...category.type, id: decodeId(category.type.id) }
-            : null,
         })),
         grievanceCategoriesPageInfo: pageInfo(action.payload.data.grievanceCategories),
         errorGrievanceCategories: formatGraphQLError(action.payload),
@@ -239,11 +236,7 @@ function reducer(
           .map((category) => ({
             ...category,
             id: decodeId(category.id),
-            type: category.type
-              ? { ...category.type, id: decodeId(category.type.id) }
-              : null,
-          }))
-          ?.[0],
+          }))?.[0],
         errorGrievanceCategory: formatGraphQLError(action.payload),
       };
     case "GRIEVANCE_CATEGORY_CATEGORY_ERR":
@@ -270,6 +263,7 @@ function reducer(
         grievanceTypes: parseData(action.payload.data.grievanceTypes).map((type) => ({
           ...type,
           id: decodeId(type.id),
+          category: type.category ? { ...type.category, id: decodeId(type.category.id) } : null,
         })),
         grievanceTypesPageInfo: pageInfo(action.payload.data.grievanceTypes),
         errorGrievanceTypes: formatGraphQLError(action.payload),
@@ -298,8 +292,8 @@ function reducer(
           .map((type) => ({
             ...type,
             id: decodeId(type.id),
-          }))
-          ?.[0],
+            category: type.category ? { ...type.category, id: decodeId(type.category.id) } : null,
+          }))?.[0],
         errorGrievanceType: formatGraphQLError(action.payload),
       };
     case "GRIEVANCE_TYPE_TYPE_ERR":
@@ -405,6 +399,8 @@ function reducer(
       return dispatchMutationResp(state, "createGrievanceCategory", action);
     case "GRIEVANCE_CATEGORY_UPDATE_RESP":
       return dispatchMutationResp(state, "updateGrievanceCategory", action);
+    case "GRIEVANCE_CATEGORY_DELETE_RESP":
+      return dispatchMutationResp(state, "deleteGrievanceCategory", action);
     case "GRIEVANCE_TYPE_MUTATION_REQ":
       return dispatchMutationReq(state, action);
     case "GRIEVANCE_TYPE_MUTATION_ERR":
@@ -413,6 +409,8 @@ function reducer(
       return dispatchMutationResp(state, "createGrievanceType", action);
     case "GRIEVANCE_TYPE_UPDATE_RESP":
       return dispatchMutationResp(state, "updateGrievanceType", action);
+    case "GRIEVANCE_TYPE_DELETE_RESP":
+      return dispatchMutationResp(state, "deleteGrievanceType", action);
     case "TICKET_ATTACHMENT_MUTATION_REQ":
       return dispatchMutationReq(state, action);
     case "TICKET_ATTACHMENT_MUTATION_ERR":

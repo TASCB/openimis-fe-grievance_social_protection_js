@@ -6,6 +6,11 @@ import { withTheme, withStyles } from "@material-ui/core/styles";
 import {
   Button,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControlLabel,
   Grid,
   Paper,
@@ -17,17 +22,23 @@ import {
   historyPush,
   journalize,
   ProgressOrError,
-  PublishedComponent,
   TextInput,
   withHistory,
   withModulesManager,
 } from "@openimis/fe-core";
 import {
   createGrievanceCategory,
+  deleteGrievanceCategory,
   fetchGrievanceCategory,
   updateGrievanceCategory,
 } from "../actions";
-import { MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_EDIT, RIGHT_TICKET_SEARCH } from "../constants";
+import {
+  MODULE_NAME,
+  RIGHT_TICKET_ADD,
+  RIGHT_TICKET_DELETE,
+  RIGHT_TICKET_EDIT,
+  RIGHT_TICKET_SEARCH,
+} from "../constants";
 
 const styles = (theme) => ({
   page: theme.page,
@@ -40,15 +51,15 @@ const styles = (theme) => ({
     display: "flex",
     gap: theme.spacing(2),
   },
+  deleteButton: {
+    marginLeft: "auto",
+    color: theme.palette.error.main,
+    borderColor: theme.palette.error.main,
+  },
 });
 
 function newCategory() {
-  return {
-    code: "",
-    name: "",
-    isActive: true,
-    type: null,
-  };
+  return { code: "", name: "", isActive: true };
 }
 
 function GrievanceCategoryFormPage({
@@ -67,9 +78,11 @@ function GrievanceCategoryFormPage({
   fetchGrievanceCategory,
   createGrievanceCategory,
   updateGrievanceCategory,
+  deleteGrievanceCategory,
   journalize,
 }) {
   const [edited, setEdited] = useState(newCategory());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const previousSubmittingMutation = useRef(false);
   const readOnly = mode === "view";
   const isCreate = mode === "create";
@@ -94,7 +107,7 @@ function GrievanceCategoryFormPage({
     previousSubmittingMutation.current = submittingMutation;
   }, [submittingMutation, mutation, journalize, modulesManager, history]);
 
-  const canSave = () => !!edited.code && !!edited.name && !!edited.type?.id;
+  const canSave = () => !!edited.name;
 
   const save = () => {
     if (!canSave()) return;
@@ -113,6 +126,16 @@ function GrievanceCategoryFormPage({
         }),
       );
     }
+  };
+
+  const handleDeleteConfirm = () => {
+    setDeleteDialogOpen(false);
+    deleteGrievanceCategory(
+      edited,
+      formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.deleteMutationLabel", {
+        name: edited.name,
+      }),
+    );
   };
 
   const back = () =>
@@ -152,18 +175,11 @@ function GrievanceCategoryFormPage({
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <PublishedComponent
-                pubRef="grievanceSocialProtection.GrievanceTypePicker"
-                value={edited.type}
-                readOnly={readOnly}
-                onChange={(type) => setEdited((prev) => ({ ...prev, type }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
               <TextInput
                 module={MODULE_NAME}
                 label="grievanceCategory.name"
                 value={edited.name || ""}
+                required
                 readOnly={readOnly}
                 onChange={(name) => setEdited((prev) => ({ ...prev, name }))}
               />
@@ -189,20 +205,63 @@ function GrievanceCategoryFormPage({
               {formatMessage(intl, MODULE_NAME, "grievanceCategory.back")}
             </Button>
             {!readOnly && (
-              <Button color="primary" variant="contained" disabled={!canSave() || submittingMutation} onClick={save}>
-                {formatMessage(intl, MODULE_NAME, isCreate ? "grievanceCategory.create" : "grievanceCategory.save")}
+              <Button
+                color="primary"
+                variant="contained"
+                disabled={!canSave() || submittingMutation}
+                onClick={save}
+              >
+                {formatMessage(
+                  intl,
+                  MODULE_NAME,
+                  isCreate ? "grievanceCategory.create" : "grievanceCategory.save",
+                )}
+              </Button>
+            )}
+            {mode === "edit" && rights.includes(RIGHT_TICKET_DELETE) && (
+              <Button
+                variant="outlined"
+                className={classes.deleteButton}
+                disabled={submittingMutation}
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                {formatMessage(intl, MODULE_NAME, "grievanceCategory.delete")}
               </Button>
             )}
           </div>
         </Paper>
       )}
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>
+          {formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteConfirmTitle")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {formatMessageWithValues(
+              intl,
+              MODULE_NAME,
+              "grievanceCategory.deleteConfirmMessage",
+              { name: edited.name },
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            {formatMessage(intl, MODULE_NAME, "cancel")}
+          </Button>
+          <Button color="secondary" onClick={handleDeleteConfirm}>
+            {formatMessage(intl, MODULE_NAME, "grievanceCategory.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
 
 const mapStateToProps = (state, props) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
-  categoryId: props.match.params.category_id,
+  categoryId: props.match?.params?.category_id,
   grievanceCategory: state.grievanceSocialProtection.grievanceCategory,
   fetchingGrievanceCategory: state.grievanceSocialProtection.fetchingGrievanceCategory,
   errorGrievanceCategory: state.grievanceSocialProtection.errorGrievanceCategory,
@@ -216,6 +275,7 @@ const mapDispatchToProps = (dispatch) =>
       fetchGrievanceCategory,
       createGrievanceCategory,
       updateGrievanceCategory,
+      deleteGrievanceCategory,
       journalize,
     },
     dispatch,

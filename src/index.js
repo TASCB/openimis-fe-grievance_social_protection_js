@@ -30,6 +30,7 @@ import CreateTicketTypePage from "./pages/CreateTicketTypePage";
 import ViewTicketTypePage from "./pages/ViewTicketTypePage";
 import EditTicketTypePage from "./pages/EditTicketTypePage";
 import GrievanceTypePicker from "./pickers/GrievanceTypePicker";
+import GrievanceCategoryPicker from "./pickers/GrievanceCategoryPicker";
 
 const ROUTE_TICKET_TICKETS = "ticket/tickets";
 const ROUTE_TICKET_TICKET = "ticket/ticket";
@@ -145,6 +146,10 @@ const DEFAULT_CONFIG = {
     {
       key: "grievanceSocialProtection.GrievanceTypePicker",
       ref: GrievanceTypePicker,
+    },
+    {
+      key: "grievanceSocialProtection.GrievanceCategoryPicker",
+      ref: GrievanceCategoryPicker,
     },
   ],
   "core.Router": [

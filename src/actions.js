@@ -32,16 +32,16 @@ const CATEGORY_FULL_PROJECTION = () => [
   "validityTo",
 ];
 
-const GRIEVANCE_TYPE_PROJECTION = () => ["id", "code", "name", "isActive"];
-
-const GRIEVANCE_CATEGORY_PROJECTION = () => [
+const GRIEVANCE_TYPE_PROJECTION = () => [
   "id",
   "code",
   "name",
   "isActive",
-  "type{id, code, name}",
-  "typeName",
+  "category{id code name}",
+  "categoryName",
 ];
+
+const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "isActive"];
 
 export function fetchCategoryForPicker(mm, filters) {
   const payload = formatPageQueryWithCount("category", filters, CATEGORY_FULL_PROJECTION(mm));
@@ -232,7 +232,6 @@ export function formatGrievanceCategoryGQL(category) {
     ${category.code ? `code: "${formatGQLString(category.code)}"` : ""}
     ${category.name ? `name: "${formatGQLString(category.name)}"` : ""}
     ${typeof category.isActive === "boolean" ? `isActive: ${category.isActive}` : ""}
-    ${category.type?.id ? `typeId: "${formatGQLString(category.type.id)}"` : ""}
   `;
 }
 
@@ -242,6 +241,7 @@ export function formatGrievanceTypeGQL(type) {
     ${type.code ? `code: "${formatGQLString(type.code)}"` : ""}
     ${type.name ? `name: "${formatGQLString(type.name)}"` : ""}
     ${typeof type.isActive === "boolean" ? `isActive: ${type.isActive}` : ""}
+    ${type.category?.id ? `categoryId: "${formatGQLString(type.category.id)}"` : ""}
   `;
 }
 
@@ -324,6 +324,52 @@ export function updateGrievanceType(type, clientMutationLabel) {
     [
       "GRIEVANCE_TYPE_MUTATION_REQ",
       "GRIEVANCE_TYPE_UPDATE_RESP",
+      "GRIEVANCE_TYPE_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: type.id,
+    },
+  );
+}
+
+export function deleteGrievanceCategory(category, clientMutationLabel) {
+  const mutation = formatMutation(
+    "deleteGrievanceCategory",
+    `ids: ["${category.id}"]`,
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_CATEGORY_MUTATION_REQ",
+      "GRIEVANCE_CATEGORY_DELETE_RESP",
+      "GRIEVANCE_CATEGORY_MUTATION_ERR",
+    ],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+      id: category.id,
+    },
+  );
+}
+
+export function deleteGrievanceType(type, clientMutationLabel) {
+  const mutation = formatMutation(
+    "deleteGrievanceType",
+    `ids: ["${type.id}"]`,
+    clientMutationLabel,
+  );
+  const requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    [
+      "GRIEVANCE_TYPE_MUTATION_REQ",
+      "GRIEVANCE_TYPE_DELETE_RESP",
       "GRIEVANCE_TYPE_MUTATION_ERR",
     ],
     {
