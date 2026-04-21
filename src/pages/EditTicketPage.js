@@ -17,6 +17,10 @@ import {
   Divider,
   IconButton,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@material-ui/core';
 import {
   journalize,
@@ -27,7 +31,7 @@ import {
 import _ from 'lodash';
 import { Save } from '@material-ui/icons';
 import { updateTicket, fetchTicket, createTicketComment } from '../actions';
-import { EMPTY_STRING, MODULE_NAME } from '../constants';
+import { EMPTY_STRING, MODULE_NAME, TICKET_STATUSES } from '../constants';
 import TicketPrintTemplate from '../components/TicketPrintTemplate';
 
 const styles = (theme) => ({
@@ -47,6 +51,8 @@ class EditTicketPage extends Component {
       comments: props.comments,
       reporter: {},
       grievanceConfig: {},
+      closingDialogOpen: false,
+      closingComment: EMPTY_STRING,
     };
   }
 
@@ -67,11 +73,47 @@ class EditTicketPage extends Component {
     }
   }
 
-  save = () => {
+  isClosingTransition = () => {
+    const { ticket } = this.props;
+    const { stateEdited } = this.state;
+    return (
+      stateEdited?.status === TICKET_STATUSES.CLOSED
+      && ticket?.status !== TICKET_STATUSES.CLOSED
+    );
+  };
+
+  persistTicket = () => {
     this.props.updateTicket(
       this.state.stateEdited,
       `updated ticket ${this.state.stateEdited.code}`,
     );
+  };
+
+  save = () => {
+    if (this.isClosingTransition()) {
+      this.setState({ closingDialogOpen: true, closingComment: EMPTY_STRING });
+      return;
+    }
+    this.persistTicket();
+  };
+
+  confirmClose = () => {
+    const { user } = this.props;
+    const { stateEdited, closingComment } = this.state;
+    if (!closingComment || !closingComment.trim()) return;
+
+    this.props.createTicketComment(
+      { comment: closingComment.trim(), commenter: user },
+      stateEdited,
+      'user',
+      `Closing comment for ticket ${stateEdited.code}`,
+    );
+    this.persistTicket();
+    this.setState({ closingDialogOpen: false, closingComment: EMPTY_STRING });
+  };
+
+  cancelClose = () => {
+    this.setState({ closingDialogOpen: false, closingComment: EMPTY_STRING });
   };
 
   updateAttribute = (k, v) => {
@@ -382,6 +424,44 @@ class EditTicketPage extends Component {
             comments={comments}
           />
         </div>
+
+        <Dialog
+          open={this.state.closingDialogOpen}
+          onClose={this.cancelClose}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>
+            <FormattedMessage module={MODULE_NAME} id="ticket.closing.dialog.title" />
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" style={{ marginBottom: 12 }}>
+              <FormattedMessage module={MODULE_NAME} id="ticket.closing.dialog.prompt" />
+            </Typography>
+            <TextInput
+              module={MODULE_NAME}
+              label="ticket.closing.dialog.comment"
+              value={this.state.closingComment}
+              onChange={(v) => this.setState({ closingComment: v })}
+              required
+              multiline
+              rows={4}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.cancelClose}>
+              <FormattedMessage module={MODULE_NAME} id="ticket.closing.dialog.cancel" />
+            </Button>
+            <Button
+              onClick={this.confirmClose}
+              color="primary"
+              variant="contained"
+              disabled={!this.state.closingComment || !this.state.closingComment.trim()}
+            >
+              <FormattedMessage module={MODULE_NAME} id="ticket.closing.dialog.confirm" />
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     );
   }
@@ -397,6 +477,7 @@ const mapStateToProps = (state, props) => ({
   ticket: state.grievanceSocialProtection.ticket,
   grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
   comments: state.grievanceSocialProtection.ticketComments,
+  user: state.core?.user?.i_user ?? null,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(
