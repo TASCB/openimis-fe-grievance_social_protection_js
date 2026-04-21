@@ -298,11 +298,13 @@ class EditTicketPage extends Component {
                   />
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
-                  <TextInput
+                  <PublishedComponent
+                    pubRef="grievanceSocialProtection.TicketTypePicker"
                     label="ticket.title"
                     value={stateEdited.title}
                     onChange={(v) => this.updateAttribute('title', v)}
                     required
+                    withNull
                     readOnly={propsReadOnly}
                   />
                 </Grid>
