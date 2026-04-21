@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Grid, Paper, Typography, Divider, IconButton } from "@material-ui/core";
 import { Save } from "@material-ui/icons";
-import { TextInput, journalize, PublishedComponent, FormattedMessage } from "@openimis/fe-core";
+import { TextInput, journalize, PublishedComponent, FormattedMessage, SelectInput } from "@openimis/fe-core";
 import { createTicket } from "../actions";
 import { EMPTY_STRING, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
@@ -44,11 +44,24 @@ class AddTicketPage extends Component {
     }
   }
 
+  isPaymentCategory = () => {
+    const name = this.state.selectedCategory?.name ?? this.state.stateEdited?.category ?? "";
+    return /malipo|payment/i.test(name);
+  };
+
+  buildTicketPayload = () => {
+    const { stateEdited, paymentWindow, paymentYear } = this.state;
+    if (!this.isPaymentCategory()) return stateEdited;
+    const extras = { paymentWindow, paymentYear };
+    return { ...stateEdited, jsonExt: JSON.stringify(extras) };
+  };
+
   save = () => {
+    const payload = this.buildTicketPayload();
     this.props.createTicket(
-      this.state.stateEdited,
+      payload,
       this.props.grievanceConfig,
-      `Created Ticket ${this.state.stateEdited.title}`,
+      `Created Ticket ${payload.title}`,
     );
     this.setState({ isSaved: true });
   };
@@ -353,6 +366,45 @@ class AddTicketPage extends Component {
                   />
                 </Grid>
 
+                {this.isPaymentCategory() && (
+                  <>
+                    <Grid item xs={6} className={classes.item}>
+                      <SelectInput
+                        module={MODULE_NAME}
+                        label="ticket.paymentWindow"
+                        value={this.state.paymentWindow ?? null}
+                        onChange={(v) => this.setState({ paymentWindow: v, isSaved: false })}
+                        options={[
+                          { value: null, label: "-" },
+                          { value: "JAN_FEB", label: "Jan - Feb" },
+                          { value: "MAR_APR", label: "Mar - Apr" },
+                          { value: "MAY_JUN", label: "May - Jun" },
+                          { value: "JUL_AUG", label: "Jul - Aug" },
+                          { value: "SEP_OCT", label: "Sep - Oct" },
+                          { value: "NOV_DEC", label: "Nov - Dec" },
+                        ]}
+                        readOnly={isSaved}
+                      />
+                    </Grid>
+                    <Grid item xs={6} className={classes.item}>
+                      <SelectInput
+                        module={MODULE_NAME}
+                        label="ticket.paymentYear"
+                        value={this.state.paymentYear ?? null}
+                        onChange={(v) => this.setState({ paymentYear: v, isSaved: false })}
+                        options={[
+                          { value: null, label: "-" },
+                          ...Array.from({ length: 6 }, (_, i) => {
+                            const y = new Date().getFullYear() + i;
+                            return { value: y, label: String(y) };
+                          }),
+                        ]}
+                        readOnly={isSaved}
+                      />
+                    </Grid>
+                  </>
+                )}
+
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
                     pubRef="core.DatePicker"
@@ -361,6 +413,7 @@ class AddTicketPage extends Component {
                     required={false}
                     onChange={(v) => this.updateAttribute("dateOfIncident", v)}
                     readOnly={isSaved}
+                    maxDate={new Date()}
                   />
                 </Grid>
 
@@ -423,6 +476,8 @@ class AddTicketPage extends Component {
                       !stateEdited.category ||
                       !stateEdited.channel ||
                       !stateEdited.title ||
+                      (this.isPaymentCategory() &&
+                        (!this.state.paymentWindow || !this.state.paymentYear)) ||
                       isSaved ||
                       ((stateEdited.reporterType === "individual" ||
                         stateEdited.reporterType === "beneficiary" ||

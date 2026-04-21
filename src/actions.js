@@ -204,6 +204,7 @@ export function formatTicketGQL(ticket) {
     ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
+    ${ticket.jsonExt ? `jsonExt: "${formatGQLString(ticket.jsonExt)}"` : ""}
   `;
 }
 

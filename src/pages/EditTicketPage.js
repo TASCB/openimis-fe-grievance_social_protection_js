@@ -316,6 +316,7 @@ class EditTicketPage extends Component {
                     required={false}
                     onChange={(v) => this.updateAttribute('dateOfIncident', v)}
                     readOnly={propsReadOnly}
+                    maxDate={new Date()}
                   />
                 </Grid>
                 <Grid item xs={6} className={classes.item}>

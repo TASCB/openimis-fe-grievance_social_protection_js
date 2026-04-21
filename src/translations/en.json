@@ -111,6 +111,8 @@
     "ticket.ticketTitle" : "Title",
     "ticket.commenter" : "Commenter",
     "ticket.comment" : "Comment",
+    "ticket.paymentWindow" : "Payment Window",
+    "ticket.paymentYear" : "Payment Year",
     "ticket.dateCreated": "Date Created",
     "ticket.markAsResolved": "Resolve Using Comment",
     "ticket.editButtonTooltip": "Edit Grievance",

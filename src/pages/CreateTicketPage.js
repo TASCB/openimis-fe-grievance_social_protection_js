@@ -284,6 +284,7 @@ function CreateTicketPage({
                   value={stateEdited.dateOfIncident}
                   onChange={(v) => updateAttribute("dateOfIncident", v)}
                   readOnly={isSaved}
+                  maxDate={new Date()}
                 />
               </Grid>
 
