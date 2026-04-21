@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from "react";
 import _debounce from "lodash/debounce";
 import { withTheme, withStyles } from "@material-ui/core/styles";
 import { Grid } from "@material-ui/core";
-import { withModulesManager, ControlledField, TextInput } from "@openimis/fe-core";
+import { withModulesManager, ControlledField, PublishedComponent, TextInput } from "@openimis/fe-core";
 import { MODULE_NAME } from "../constants";
 
 const styles = (theme) => ({
@@ -33,28 +33,9 @@ function GrievanceTypeFilter({ classes, filters, onChangeFilters, modulesManager
     <Grid container className={classes.form}>
       <ControlledField
         module={MODULE_NAME}
-        id="grievanceTypeFilter.code"
-        field={
-          <Grid item xs={12} sm={4} className={classes.item}>
-            <TextInput
-              module={MODULE_NAME}
-              label="grievanceType.code"
-              name="code"
-              value={filterValue("code")}
-              onChange={(v) =>
-                debouncedOnChangeFilter([
-                  { id: "code", value: v, filter: `code_Icontains: "${v}"` },
-                ])
-              }
-            />
-          </Grid>
-        }
-      />
-      <ControlledField
-        module={MODULE_NAME}
         id="grievanceTypeFilter.name"
         field={
-          <Grid item xs={12} sm={4} className={classes.item}>
+          <Grid item xs={12} sm={6} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label="grievanceType.name"
@@ -71,17 +52,20 @@ function GrievanceTypeFilter({ classes, filters, onChangeFilters, modulesManager
       />
       <ControlledField
         module={MODULE_NAME}
-        id="grievanceTypeFilter.categoryName"
+        id="grievanceTypeFilter.category"
         field={
-          <Grid item xs={12} sm={4} className={classes.item}>
-            <TextInput
-              module={MODULE_NAME}
-              label="grievanceType.category"
-              name="categoryName"
-              value={filterValue("categoryName")}
-              onChange={(v) =>
+          <Grid item xs={12} sm={6} className={classes.item}>
+            <PublishedComponent
+              pubRef="grievanceSocialProtection.GrievanceCategoryPicker"
+              value={filterValue("category") || null}
+              withNull
+              onChange={(category) =>
                 debouncedOnChangeFilter([
-                  { id: "categoryName", value: v, filter: `category_Name_Icontains: "${v}"` },
+                  {
+                    id: "category",
+                    value: category || null,
+                    filter: category?.id ? `category_Id: "${category.id}"` : null,
+                  },
                 ])
               }
             />

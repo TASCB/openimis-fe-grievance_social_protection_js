@@ -96,6 +96,7 @@ function GrievanceChannelsSearcher({
 
   const filtersToQueryParams = (state) => {
     const prms = Object.keys(state.filters)
+      .filter((f) => f !== "code")
       .filter((f) => !!state.filters[f].filter)
       .map((f) => state.filters[f].filter);
     prms.push(`first: ${state.pageSize}`);
@@ -107,7 +108,6 @@ function GrievanceChannelsSearcher({
 
   const itemFormatters = () => {
     const formatters = [
-      (channel) => channel.code,
       (channel) => channel.name,
       (channel) =>
         channel.isActive
@@ -169,7 +169,6 @@ function GrievanceChannelsSearcher({
   };
 
   const headers = () => [
-    "grievanceChannel.code",
     "grievanceChannel.name",
     "grievanceChannel.status",
     "",
@@ -201,7 +200,6 @@ function GrievanceChannelsSearcher({
         headers={headers}
         itemFormatters={itemFormatters}
         sorts={() => [
-          ["code", true],
           ["name", true],
         ]}
         onDoubleClick={(channel) =>

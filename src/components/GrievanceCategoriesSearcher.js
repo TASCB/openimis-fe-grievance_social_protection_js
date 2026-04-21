@@ -96,6 +96,7 @@ function GrievanceCategoriesSearcher({
 
   const filtersToQueryParams = (state) => {
     const prms = Object.keys(state.filters)
+      .filter((f) => f !== "code")
       .filter((f) => !!state.filters[f].filter)
       .map((f) => state.filters[f].filter);
     prms.push(`first: ${state.pageSize}`);
@@ -107,7 +108,6 @@ function GrievanceCategoriesSearcher({
 
   const itemFormatters = () => {
     const formatters = [
-      (category) => category.code,
       (category) => category.name,
       (category) =>
         category.isActive
@@ -169,7 +169,6 @@ function GrievanceCategoriesSearcher({
   };
 
   const headers = () => [
-    "grievanceCategory.code",
     "grievanceCategory.name",
     "grievanceCategory.status",
     "",
@@ -201,7 +200,6 @@ function GrievanceCategoriesSearcher({
         headers={headers}
         itemFormatters={itemFormatters}
         sorts={() => [
-          ["code", true],
           ["name", true],
         ]}
         onDoubleClick={(category) =>

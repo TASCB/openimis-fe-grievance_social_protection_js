@@ -33,28 +33,9 @@ function GrievanceChannelFilter({ classes, filters, onChangeFilters, modulesMana
     <Grid container className={classes.form}>
       <ControlledField
         module={MODULE_NAME}
-        id="grievanceChannelFilter.code"
-        field={
-          <Grid item xs={12} sm={6} className={classes.item}>
-            <TextInput
-              module={MODULE_NAME}
-              label="grievanceChannel.code"
-              name="code"
-              value={filterValue("code")}
-              onChange={(v) =>
-                debouncedOnChangeFilter([
-                  { id: "code", value: v, filter: `code_Icontains: "${v}"` },
-                ])
-              }
-            />
-          </Grid>
-        }
-      />
-      <ControlledField
-        module={MODULE_NAME}
         id="grievanceChannelFilter.name"
         field={
-          <Grid item xs={12} sm={6} className={classes.item}>
+          <Grid item xs={12} sm={12} className={classes.item}>
             <TextInput
               module={MODULE_NAME}
               label="grievanceChannel.name"
