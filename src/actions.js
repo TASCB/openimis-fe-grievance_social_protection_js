@@ -567,24 +567,72 @@ export function resolveTicket(ticket, clientMutationLabel) {
 }
 
 export function fetchTicketAttachments(ticket) {
-  if (ticket && ticket.uuid) {
+  if (ticket && ticket.id) {
+    const rawId = isBase64Encoded(ticket.id) ? decodeId(ticket.id) : ticket.id;
     const payload = formatPageQuery(
       "ticketAttachments",
-      [`ticket_Uuid: "${ticket.uuid}"`],
-      ["id", "uuid", "date", "filename", "mimeType", "ticket{id, uuid, ticketCode}"],
+      [`ticket_Id: "${rawId}"`],
+      ["id", "filename", "mimeType", "url", "ticket{id}"],
     );
     return graphql(payload, "TICKET_TICKET_ATTACHMENTS");
   }
-  return { type: "TICKET_TICKET_ATTACHMENTS", payload: { data: [] } };
+  return { type: "TICKET_TICKET_ATTACHMENTS_CLEAR" };
+}
+
+export function attachmentDownloadUrl(attachment) {
+  const id = isBase64Encoded(attachment.id) ? decodeId(attachment.id) : attachment.id;
+  return `${baseApiUrl}/grievance_social_protection/attach?id=${encodeURIComponent(id)}`;
 }
 
 export function downloadAttachment(attach) {
-  const url = new URL(`${window.location.origin}${baseApiUrl}/ticket/attach`);
-  url.search = new URLSearchParams({ id: decodeId(attach.id) });
-  return () =>
-    fetch(url)
-      .then((response) => response.blob())
-      .then((blob) => openBlob(blob, attach.filename, attach.mime));
+  return () => {
+    const link = document.createElement("a");
+    link.href = attachmentDownloadUrl(attach);
+    link.download = attach.filename || "attachment";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+}
+
+export function uploadTicketAttachments(ticketUuid, files, opts = {}) {
+  return async (dispatch) => {
+    if (!files || files.length === 0) return { saved: [], errors: [] };
+    dispatch({ type: "TICKET_UPLOAD_ATTACHMENTS_REQ" });
+    const form = new FormData();
+    if (ticketUuid) {
+      const rawUuid = isBase64Encoded(ticketUuid) ? decodeId(ticketUuid) : ticketUuid;
+      form.append("ticket_uuid", rawUuid);
+    } else if (opts.clientMutationId) {
+      form.append("client_mutation_id", opts.clientMutationId);
+    }
+    files.forEach((f) => form.append("files", f));
+    try {
+      const response = await fetch(`${baseApiUrl}/grievance_social_protection/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        dispatch({ type: "TICKET_UPLOAD_ATTACHMENTS_ERR", payload: data });
+        return { error: data };
+      }
+      dispatch({ type: "TICKET_UPLOAD_ATTACHMENTS_RESP", payload: data });
+      return data;
+    } catch (err) {
+      dispatch({ type: "TICKET_UPLOAD_ATTACHMENTS_ERR", payload: { error: String(err) } });
+      return { error: String(err) };
+    }
+  };
+}
+
+export function setPendingAttachments(files) {
+  return { type: "TICKET_PENDING_ATTACHMENTS_SET", payload: files };
+}
+
+export function clearPendingAttachments() {
+  return { type: "TICKET_PENDING_ATTACHMENTS_CLEAR" };
 }
 
 export function formatTicketAttachmentGQL(ticketattachment) {

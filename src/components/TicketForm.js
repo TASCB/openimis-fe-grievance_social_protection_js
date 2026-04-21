@@ -2,7 +2,7 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable class-methods-use-this */
 /* eslint-disable react/no-did-update-set-state */
-import React, { Component, Fragment } from 'react';
+import React, { Component } from 'react';
 import { injectIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import LockOpenIcon from '@material-ui/icons/LockOpen';
@@ -18,6 +18,7 @@ import { ticketLabel } from '../utils/utils';
 import EditTicketPage from '../pages/EditTicketPage';
 import AddTicketPage from '../pages/AddTicketPage';
 import TicketCommentPanel from './TicketCommentsPanel';
+import TicketAttachmentsPanel from './TicketAttachmentsPanel';
 import { MODULE_NAME, TICKET_STATUSES } from '../constants';
 
 class TicketForm extends Component {
@@ -61,7 +62,10 @@ class TicketForm extends Component {
         ticketUuid: props.ticket.id,
         lockNew: false,
       }));
-    } else if (prevState.ticketUuid !== this.state.ticketUuid) {
+    } else if (
+      prevState.ticketUuid !== this.state.ticketUuid
+      && this.state.ticketUuid !== this.props.ticket?.id
+    ) {
       const filters = [`id: "${this.state.ticketUuid}"`];
       if (this.props.ticketVersion) filters.push(`ticketVersion: ${this.props.ticketVersion}`);
       this.props.fetchTicket(
@@ -73,10 +77,11 @@ class TicketForm extends Component {
     } else if (prevProps.submittingMutation && !this.props.submittingMutation) {
       this.props.journalize(this.props.mutation);
       this.setState((state) => ({ reset: state.reset + 1 }));
-      if (this.props?.ticket?.id) {
+      const createdOrUpdatedTicketId = this.props?.ticket?.id || this.props?.mutation?.id;
+      if (createdOrUpdatedTicketId) {
         this.props.fetchTicket(
           this.props.modulesManager,
-          [`id: "${this.state.ticketUuid}"`],
+          [`id: "${createdOrUpdatedTicketId}"`],
         );
       }
     }
@@ -164,7 +169,7 @@ class TicketForm extends Component {
           reload={(ticketUuid || readOnly) && this.reload}
           readOnly={readOnly}
           overview={overview}
-          Panels={ticketUuid ? [EditTicketPage, TicketCommentPanel] : [AddTicketPage]}
+          Panels={ticketUuid ? [EditTicketPage, TicketAttachmentsPanel, TicketCommentPanel] : [AddTicketPage]}
           onEditedChanged={this.onEditedChanged}
           actions={actions}
         />

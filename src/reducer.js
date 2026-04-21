@@ -80,6 +80,11 @@ function reducer(
     errorTicketAttachments: null,
     ticketAttachments: null,
 
+    uploadingAttachments: false,
+    uploadAttachmentsResult: null,
+    errorUploadAttachments: null,
+    pendingAttachments: [],
+
     fetchingGrievanceConfig: false,
     fetchedGrievanceConfig: false,
     errorGrievanceConfig: null,
@@ -146,6 +151,14 @@ function reducer(
         fetchedTicket: false,
         ticket: null,
         errorTicket: null,
+        fetchingTicketAttachments: false,
+        fetchedTicketAttachments: false,
+        errorTicketAttachments: null,
+        ticketAttachments: null,
+        uploadingAttachments: false,
+        uploadAttachmentsResult: null,
+        errorUploadAttachments: null,
+        pendingAttachments: [],
         fetchingTicketComments: false,
         fetchedTicketComments: false,
         ticketComments: [],
@@ -391,6 +404,42 @@ function reducer(
         ...state,
         fetchingTicketAttachments: false,
         errorTicketAttachments: formatServerError(action.payload),
+      };
+    case "TICKET_TICKET_ATTACHMENTS_CLEAR":
+      return {
+        ...state,
+        ticketAttachments: null,
+        fetchedTicketAttachments: false,
+      };
+    case "TICKET_UPLOAD_ATTACHMENTS_REQ":
+      return {
+        ...state,
+        uploadingAttachments: true,
+        uploadAttachmentsResult: null,
+        errorUploadAttachments: null,
+      };
+    case "TICKET_UPLOAD_ATTACHMENTS_RESP":
+      return {
+        ...state,
+        uploadingAttachments: false,
+        uploadAttachmentsResult: action.payload,
+        errorUploadAttachments: null,
+      };
+    case "TICKET_UPLOAD_ATTACHMENTS_ERR":
+      return {
+        ...state,
+        uploadingAttachments: false,
+        errorUploadAttachments: action.payload,
+      };
+    case "TICKET_PENDING_ATTACHMENTS_SET":
+      return {
+        ...state,
+        pendingAttachments: action.payload || [],
+      };
+    case "TICKET_PENDING_ATTACHMENTS_CLEAR":
+      return {
+        ...state,
+        pendingAttachments: [],
       };
     case "TICKET_INSUREE_TICKETS_REQ":
       return {

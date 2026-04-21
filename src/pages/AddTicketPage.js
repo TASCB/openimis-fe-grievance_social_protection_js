@@ -6,10 +6,12 @@ import React, { Component } from "react";
 import { withTheme, withStyles } from "@material-ui/core/styles";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Grid, Paper, Typography, Divider, IconButton } from "@material-ui/core";
-import { Save } from "@material-ui/icons";
-import { TextInput, journalize, PublishedComponent, FormattedMessage, SelectInput } from "@openimis/fe-core";
-import { createTicket } from "../actions";
+import { Grid, Paper, Typography, Divider, IconButton, Button, Chip } from "@material-ui/core";
+import { Save, CloudUpload } from "@material-ui/icons";
+import { TextInput, PublishedComponent, FormattedMessage, SelectInput } from "@openimis/fe-core";
+import {
+  createTicket, setPendingAttachments,
+} from "../actions";
 import { EMPTY_STRING, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
 
@@ -35,13 +37,6 @@ class AddTicketPage extends Component {
         priority: "Low",
       },
     };
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  componentDidUpdate(prevPops, prevState, snapshort) {
-    if (prevPops.submittingMutation && !this.props.submittingMutation) {
-      this.props.journalize(this.props.mutation);
-    }
   }
 
   isPaymentCategory = () => {
@@ -115,6 +110,40 @@ class AddTicketPage extends Component {
   updateBenefitPlan = (field, value) => {
     this.updateAttribute("reporter", null);
     this.setState((state) => ({ benefitPlan: value }));
+  };
+
+  handleSelectFiles = (event) => {
+    const picked = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (picked.length === 0) return;
+    const ALLOWED = [
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "video/mp4", "video/webm",
+      "audio/mpeg", "audio/wav", "audio/ogg",
+      "application/pdf",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    const MAX = 25 * 1024 * 1024;
+    const errors = [];
+    const existing = this.props.pendingAttachments || [];
+    const next = [...existing];
+    for (const f of picked) {
+      if (next.length >= 5) { errors.push(`${f.name}: max 5 files`); continue; }
+      if (f.size > MAX) { errors.push(`${f.name}: exceeds 25MB`); continue; }
+      if (!ALLOWED.includes((f.type || "").toLowerCase())) {
+        errors.push(`${f.name}: type not allowed`); continue;
+      }
+      next.push(f);
+    }
+    this.props.setPendingAttachments(next);
+    this.setState({ attachmentErrors: errors });
+  };
+
+  removePending = (idx) => {
+    const next = [...(this.props.pendingAttachments || [])];
+    next.splice(idx, 1);
+    this.props.setPendingAttachments(next);
   };
 
   render() {
@@ -465,6 +494,45 @@ class AddTicketPage extends Component {
                     readOnly={isSaved}
                   />
                 </Grid>
+
+                <Grid item xs={12} className={classes.item}>
+                  <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                    <FormattedMessage module={MODULE_NAME} id="ticket.attachments.optional" />
+                  </Typography>
+                  <input
+                    id="ticket-attachments-input"
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,audio/mpeg,audio/wav,audio/ogg,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    style={{ display: "none" }}
+                    onChange={this.handleSelectFiles}
+                    disabled={isSaved}
+                  />
+                  <label htmlFor="ticket-attachments-input">
+                    <Button
+                      component="span"
+                      variant="outlined"
+                      startIcon={<CloudUpload />}
+                      disabled={isSaved || (this.props.pendingAttachments?.length || 0) >= 5}
+                    >
+                      <FormattedMessage module={MODULE_NAME} id="ticket.attachments.selectFiles" />
+                    </Button>
+                  </label>
+                  <div style={{ marginTop: 8 }}>
+                    {(this.props.pendingAttachments || []).map((f, i) => (
+                      <Chip
+                        key={`${f.name}-${i}`}
+                        label={`${f.name} (${Math.round(f.size / 1024)}KB)`}
+                        onDelete={isSaved ? undefined : () => this.removePending(i)}
+                        style={{ margin: 4 }}
+                      />
+                    ))}
+                  </div>
+                  {(this.state.attachmentErrors || []).map((e) => (
+                    <Typography key={e} color="error" variant="caption" display="block">{e}</Typography>
+                  ))}
+                </Grid>
+
                 <Grid item xs={11} className={classes.item} />
                 <Grid item xs={1} className={classes.item}>
                   <IconButton
@@ -503,11 +571,18 @@ function mapStateToProps(state, props) {
     submittingMutation: state.grievanceSocialProtection.submittingMutation,
     mutation: state.grievanceSocialProtection.mutation,
     grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
+    pendingAttachments: state.grievanceSocialProtection.pendingAttachments,
   };
 }
 
 function mapDispatchToProps(dispatch) {
-  return bindActionCreators({ createTicket, journalize }, dispatch);
+  return bindActionCreators(
+    {
+      createTicket,
+      setPendingAttachments,
+    },
+    dispatch,
+  );
 }
 
 export default withTheme(
