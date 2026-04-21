@@ -1,43 +1,59 @@
 import React, { useState } from "react";
-import { useTranslations, Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
+import { Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
+
+const PAGE_SIZE = 100;
 
 const GRAPHQL_QUERY = `
-  query GetGrievancesCategories($typeId: ID) {
-    grievanceCategories(typeId: $typeId) {
+  query GetGrievanceCategories($first: Int) {
+    grievanceCategories(first: $first, isActive: true) {
       edges {
-        node {id name}
+        node {
+          id
+          name
+        }
       }
     }
   }
 `;
 
-export default function TicketCategoryPicker({ type, onChange, value, readOnly, ...props }) {
+function getOptionLabel(option) {
+  if (typeof option === "string") return option;
+  return option?.name || "";
+}
+
+function getSelectedValue(options, value) {
+  if (!value) return null;
+  if (typeof value !== "string") return value;
+  return options.find((option) => option.name === value) ?? { id: value, name: value };
+}
+
+export default function TicketCategoryPicker({ onChange, value, readOnly, ...props }) {
   const [searchString, setSearchString] = useState(null);
-
-  const typeId = type?.id ?? null;
-
   const { isLoading, data, error } = useGraphqlQuery(
     GRAPHQL_QUERY,
-    { searchString, first: 20, typeId },
-    { skip: true },
+    { first: PAGE_SIZE, searchString },
+    { skip: false },
   );
+
+  const options = data?.grievanceCategories?.edges?.map(({ node }) => node) ?? [];
 
   return (
     <Autocomplete
       {...props}
       multiple={false}
-      required={true}
+      required
       error={error}
-      placeholder={"Select grievance category..."}
-      label={"Category"}
-      withLabel={true}
-      withPlaceholder={"Select category..."}
+      placeholder="Select grievance category..."
+      label="Category"
+      withLabel
+      withPlaceholder
       readOnly={readOnly}
-      options={data?.grievanceCategories?.edges.map(({ node }) => node.name) ?? []}
+      options={options}
       isLoading={isLoading}
-      value={value ?? null}
-      getOptionLabel={(option) => `${option}`}
-      onChange={(option) => onChange(option, option ? `${option}` : null)}
+      value={getSelectedValue(options, value)}
+      getOptionLabel={getOptionLabel}
+      getOptionSelected={(option, selected) => option?.id === selected?.id || option?.name === selected?.name}
+      onChange={(option) => onChange(option?.name ?? null, option ?? null)}
       onInputChange={setSearchString}
     />
   );

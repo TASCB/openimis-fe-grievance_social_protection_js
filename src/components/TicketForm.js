@@ -96,6 +96,7 @@ class TicketForm extends Component {
   canSave = () => {
     if (!this.state.ticket.reporter) return false;
     if (!this.state.ticket.category) return false;
+    if (!this.state.ticket.title) return false;
     return true;
   };
 

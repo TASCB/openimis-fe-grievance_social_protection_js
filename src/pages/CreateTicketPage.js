@@ -31,6 +31,8 @@ function CreateTicketPage({
   const [stateEdited, setStateEdited] = useState({});
   const [grievantType, setGrievantType] = useState(null);
   const [benefitPlan, setBenefitPlan] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
   const [isSaved, setIsSaved] = useState(false);
 
   const [prevSubmitting, setPrevSubmitting] = useState(submittingMutation);
@@ -49,6 +51,23 @@ function CreateTicketPage({
 
   function updateAttribute(k, v) {
     setStateEdited((prev) => ({ ...prev, [k]: v }));
+    setIsSaved(false);
+  }
+
+  function updateTicketCategory(categoryName, category) {
+    setSelectedCategory(category ?? null);
+    setSelectedType(null);
+    setStateEdited((prev) => ({
+      ...prev,
+      category: categoryName,
+      title: null,
+    }));
+    setIsSaved(false);
+  }
+
+  function updateTicketType(typeName, type) {
+    setSelectedType(type ?? null);
+    setStateEdited((prev) => ({ ...prev, title: typeName }));
     setIsSaved(false);
   }
 
@@ -240,19 +259,21 @@ function CreateTicketPage({
             <Grid container className={classes.item}>
               <Grid item xs={6}>
                 <PublishedComponent
-                  label="ticket.title"
-                  value={stateEdited.title}
-                  pubRef="grievanceSocialProtection.TicketTypePicker"
-                  onChange={(v) => updateAttribute("title", v)}
+                  label="ticket.category"
+                  pubRef="grievanceSocialProtection.TicketCategoryPicker"
+                  value={selectedCategory ?? stateEdited.category ?? null}
+                  onChange={updateTicketCategory}
                 />
               </Grid>
 
               <Grid item xs={6}>
                 <PublishedComponent
-                  label="ticket.category"
-                  value={stateEdited.category}
-                  pubRef="grievanceSocialProtection.TicketCategoryPicker"
-                  onChange={(v) => updateAttribute("category", v)}
+                  label="ticket.title"
+                  value={selectedType ?? stateEdited.title ?? null}
+                  pubRef="grievanceSocialProtection.TicketTypePicker"
+                  onChange={updateTicketType}
+                  category={selectedCategory}
+                  restrictToCategory
                 />
               </Grid>
 
@@ -310,6 +331,7 @@ function CreateTicketPage({
                   color="primary"
                   onClick={save}
                   disabled={
+                    !stateEdited.category ||
                     !stateEdited.channel ||
                     !stateEdited.flags ||
                     !stateEdited.title ||

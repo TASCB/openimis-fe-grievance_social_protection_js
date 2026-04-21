@@ -27,6 +27,8 @@ class AddTicketPage extends Component {
       isSaved: false,
       grievantType: null,
       benefitPlan: null,
+      selectedCategory: null,
+      selectedType: null,
       stateEdited: {
         flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
         channel: "Web",
@@ -53,11 +55,32 @@ class AddTicketPage extends Component {
   updateAttribute = (k, v) => {
     this.setState((state) => {
       const updatedState = { ...state.stateEdited, [k]: v };
-      if (k === "title") {
-        updatedState.category = null;
-      }
       return { isSaved: false, stateEdited: updatedState };
     });
+  };
+
+  updateTicketCategory = (categoryName, category) => {
+    this.setState((state) => ({
+      isSaved: false,
+      selectedCategory: category ?? null,
+      selectedType: null,
+      stateEdited: {
+        ...state.stateEdited,
+        category: categoryName,
+        title: null,
+      },
+    }));
+  };
+
+  updateTicketType = (typeName, type) => {
+    this.setState((state) => ({
+      isSaved: false,
+      selectedType: type ?? null,
+      stateEdited: {
+        ...state.stateEdited,
+        title: typeName,
+      },
+    }));
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -88,7 +111,14 @@ class AddTicketPage extends Component {
       titleParams = { label: EMPTY_STRING },
     } = this.props;
 
-    const { stateEdited, grievantType, benefitPlan, isSaved } = this.state;
+    const {
+      stateEdited,
+      grievantType,
+      benefitPlan,
+      isSaved,
+      selectedCategory,
+      selectedType,
+    } = this.state;
 
     return (
       <div className={classes.page}>
@@ -304,20 +334,21 @@ class AddTicketPage extends Component {
 
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.TicketTypePicker"
-                    label="ticket.title"
-                    value={stateEdited?.title ?? null}
-                    onChange={(v) => this.updateAttribute("title", v)}
+                    pubRef="grievanceSocialProtection.TicketCategoryPicker"
+                    label="ticket.category"
+                    value={selectedCategory ?? stateEdited.category ?? null}
+                    onChange={this.updateTicketCategory}
                   />
                 </Grid>
 
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
-                    pubRef="grievanceSocialProtection.TicketCategoryPicker"
-                    label="ticket.category"
-                    value={stateEdited.category}
-                    onChange={(v) => this.updateAttribute("category", v)}
-                    type={stateEdited.title}
+                    pubRef="grievanceSocialProtection.TicketTypePicker"
+                    label="ticket.title"
+                    value={selectedType ?? stateEdited.title ?? null}
+                    onChange={this.updateTicketType}
+                    category={selectedCategory}
+                    restrictToCategory
                   />
                 </Grid>
 
@@ -398,6 +429,7 @@ class AddTicketPage extends Component {
                     color="primary"
                     onClick={this.save}
                     disabled={
+                      !stateEdited.category ||
                       !stateEdited.channel ||
                       !stateEdited.flags ||
                       !stateEdited.title ||
