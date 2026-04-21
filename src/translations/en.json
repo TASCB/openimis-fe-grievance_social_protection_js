@@ -26,6 +26,8 @@
     "tickets.title" : "Title",
     "tickets.type" : "Type",
     "tickets.reporter" : "Reporter",
+    "ticketFilter.dateOfIncidentFrom" : "Date of Incident From",
+    "ticketFilter.dateOfIncidentTo" : "Date of Incident To",
     " Ticket.ComplainantInformation" : "REPORTER INFORMATION",
     "ticket.name" : "Name",
     "ticket.phone" : "Phone",

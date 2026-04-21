@@ -104,20 +104,43 @@ class TicketFilter extends Component {
         />
         <ControlledField
           module={MODULE_NAME}
-          id="ticketFilter.priority"
+          id="ticket.category"
           field={
             <Grid item xs={3} className={classes.item}>
               <PublishedComponent
-                pubRef="grievanceSocialProtection.TicketPriorityPicker"
+                pubRef="grievanceSocialProtection.TicketCategoryPicker"
                 withNull
-                label="ticket.ticketPriority"
-                value={this._filterValue("priority")}
-                onChange={(v) =>
+                label="ticket.category"
+                value={this._filterValue("category")}
+                onChange={(categoryName) =>
                   this.debouncedOnChangeFilter([
                     {
-                      id: "priority",
-                      value: v,
-                      filter: `priority_Icontains: "${v}"`,
+                      id: "category",
+                      value: categoryName,
+                      filter: categoryName ? `category_Icontains: "${categoryName}"` : null,
+                    },
+                  ])
+                }
+              />
+            </Grid>
+          }
+        />
+        <ControlledField
+          module={MODULE_NAME}
+          id="ticketFilter.type"
+          field={
+            <Grid item xs={3} className={classes.item}>
+              <PublishedComponent
+                pubRef="grievanceSocialProtection.TicketTypePicker"
+                withNull
+                label="ticket.title"
+                value={this._filterValue("title")}
+                onChange={(typeName) =>
+                  this.debouncedOnChangeFilter([
+                    {
+                      id: "title",
+                      value: typeName,
+                      filter: typeName ? `title_Icontains: "${typeName}"` : null,
                     },
                   ])
                 }
@@ -150,19 +173,65 @@ class TicketFilter extends Component {
         />
         <ControlledField
           module={MODULE_NAME}
-          id="ticket.category"
+          id="ticketFilter.channel"
           field={
             <Grid item xs={3} className={classes.item}>
               <PublishedComponent
-                pubRef="grievanceSocialProtection.DropDownCategoryPicker"
+                pubRef="grievanceSocialProtection.ChannelPicker"
                 withNull
-                value={this._filterValue("category")}
-                onChange={(v) =>
+                value={this._filterValue("channel")}
+                onChange={(channelName) =>
                   this.debouncedOnChangeFilter([
                     {
-                      id: "category",
+                      id: "channel",
+                      value: channelName,
+                      filter: channelName ? `channel_Icontains: "${channelName}"` : null,
+                    },
+                  ])
+                }
+              />
+            </Grid>
+          }
+        />
+        <ControlledField
+          module={MODULE_NAME}
+          id="ticketFilter.dateOfIncidentFrom"
+          field={
+            <Grid item xs={3} className={classes.item}>
+              <PublishedComponent
+                pubRef="core.DatePicker"
+                module={MODULE_NAME}
+                label="ticketFilter.dateOfIncidentFrom"
+                value={this._filterValue("dateOfIncidentFrom")}
+                onChange={(v) =>
+                  this.props.onChangeFilters([
+                    {
+                      id: "dateOfIncidentFrom",
                       value: v,
-                      filter: `category_Icontains: "${v}"`,
+                      filter: v ? `dateOfIncident_Gte: "${v}"` : null,
+                    },
+                  ])
+                }
+              />
+            </Grid>
+          }
+        />
+        <ControlledField
+          module={MODULE_NAME}
+          id="ticketFilter.dateOfIncidentTo"
+          field={
+            <Grid item xs={3} className={classes.item}>
+              <PublishedComponent
+                pubRef="core.DatePicker"
+                module={MODULE_NAME}
+                label="ticketFilter.dateOfIncidentTo"
+                value={this._filterValue("dateOfIncidentTo")}
+                onChange={(v) =>
+                  this.props.onChangeFilters([
+                    {
+                      id: "dateOfIncidentTo",
+                      value: v,
+                      filter: v ? `dateOfIncident_Lte: "${v}"` : null,
                     },
                   ])
                 }
