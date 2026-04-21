@@ -43,6 +43,15 @@ const styles = (theme) => ({
   },
 });
 
+const PAYMENT_WINDOW_LABELS = {
+  JAN_FEB: 'Jan - Feb',
+  MAR_APR: 'Mar - Apr',
+  MAY_JUN: 'May - Jun',
+  JUL_AUG: 'Jul - Aug',
+  SEP_OCT: 'Sep - Oct',
+  NOV_DEC: 'Nov - Dec',
+};
+
 class EditTicketPage extends Component {
   constructor(props) {
     super(props);
@@ -138,6 +147,24 @@ class EditTicketPage extends Component {
     return !_.isEqual(ticket, stateEdited);
   };
 
+  getTicketJsonExt = () => {
+    const jsonExt = this.state.stateEdited?.jsonExt;
+    if (!jsonExt) return {};
+    if (typeof jsonExt === 'string') {
+      try {
+        return JSON.parse(jsonExt);
+      } catch (e) {
+        return {};
+      }
+    }
+    return jsonExt;
+  };
+
+  getPaymentWindowLabel = () => {
+    const paymentWindow = this.getTicketJsonExt().paymentWindow;
+    return PAYMENT_WINDOW_LABELS[paymentWindow] || paymentWindow || EMPTY_STRING;
+  };
+
   render() {
     const {
       classes,
@@ -153,6 +180,8 @@ class EditTicketPage extends Component {
     const {
       stateEdited, reporter, comments,
     } = this.state;
+    const ticketJsonExt = this.getTicketJsonExt();
+    const paymentWindowLabel = this.getPaymentWindowLabel();
     return (
       <div className={classes.page}>
         <Grid container>
@@ -328,6 +357,30 @@ class EditTicketPage extends Component {
                     readOnly={propsReadOnly}
                   />
                 </Grid>
+                {!!paymentWindowLabel && (
+                <Grid item xs={6} className={classes.item}>
+                  <TextInput
+                    module={MODULE_NAME}
+                    label="ticket.paymentWindow"
+                    value={paymentWindowLabel}
+                    onChange={() => null}
+                    required={false}
+                    readOnly
+                  />
+                </Grid>
+                )}
+                {!!ticketJsonExt.paymentYear && (
+                <Grid item xs={6} className={classes.item}>
+                  <TextInput
+                    module={MODULE_NAME}
+                    label="ticket.paymentYear"
+                    value={String(ticketJsonExt.paymentYear)}
+                    onChange={() => null}
+                    required={false}
+                    readOnly
+                  />
+                </Grid>
+                )}
                 <Grid item xs={6} className={classes.item}>
                   <PublishedComponent
                     pubRef="grievanceSocialProtection.TicketPriorityPicker"

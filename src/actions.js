@@ -179,6 +179,12 @@ export function fetchComments(ticket) {
   return { type: "COMMENT_COMMENTS", payload: { data: [] } };
 }
 
+function formatJsonExtGQL(jsonExt) {
+  if (!jsonExt) return "";
+  const jsonExtString = typeof jsonExt === "string" ? jsonExt : JSON.stringify(jsonExt);
+  return `jsonExt: ${JSON.stringify(jsonExtString)}`;
+}
+
 export function formatTicketGQL(ticket) {
   return `
     ${ticket.id !== undefined && ticket.id !== null ? `id: "${ticket.id}"` : ""}
@@ -204,7 +210,7 @@ export function formatTicketGQL(ticket) {
     ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
-    ${ticket.jsonExt ? `jsonExt: "${formatGQLString(ticket.jsonExt)}"` : ""}
+    ${formatJsonExtGQL(ticket.jsonExt)}
   `;
 }
 
