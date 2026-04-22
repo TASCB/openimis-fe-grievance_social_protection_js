@@ -423,10 +423,13 @@ class AddTicketPage extends Component {
                         onChange={(v) => this.setState({ paymentYear: v, isSaved: false })}
                         options={[
                           { value: null, label: "-" },
-                          ...Array.from({ length: 6 }, (_, i) => {
-                            const y = new Date().getFullYear() + i;
-                            return { value: y, label: String(y) };
-                          }),
+                          ...Array.from(
+                            { length: new Date().getFullYear() - 2020 + 1 },
+                            (_, i) => {
+                              const y = new Date().getFullYear() - i;
+                              return { value: y, label: String(y) };
+                            },
+                          ),
                         ]}
                         readOnly={isSaved}
                       />

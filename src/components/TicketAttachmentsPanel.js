@@ -19,7 +19,7 @@ import AudiotrackIcon from '@material-ui/icons/Audiotrack';
 import PictureAsPdfIcon from '@material-ui/icons/PictureAsPdf';
 import DescriptionIcon from '@material-ui/icons/Description';
 import DeleteIcon from '@material-ui/icons/Delete';
-import { FormattedMessage, formatMessage } from '@openimis/fe-core';
+import { FormattedMessage, formatMessage, apiHeaders } from '@openimis/fe-core';
 import {
   fetchTicketAttachments, uploadTicketAttachments,
   clearPendingAttachments, attachmentDownloadUrl, downloadAttachment,
@@ -70,6 +70,7 @@ class TicketAttachmentsPanel extends Component {
     super(props);
     this.state = {
       previewing: null,
+      previewUrl: null,
       errors: [],
       uploadedPending: false,
     };
@@ -160,32 +161,51 @@ class TicketAttachmentsPanel extends Component {
     if (this.fileInputRef.current) this.fileInputRef.current.click();
   };
 
-  openPreview = (attachment) => this.setState({ previewing: attachment });
+  openPreview = async (attachment) => {
+    this.setState({ previewing: attachment, previewUrl: null });
+    try {
+      const response = await fetch(attachmentDownloadUrl(attachment), {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: apiHeaders,
+      });
+      if (!response.ok) return;
+      const blob = await response.blob();
+      const previewUrl = window.URL.createObjectURL(blob);
+      this.setState({ previewUrl });
+    } catch (err) {
+      // ignore
+    }
+  };
 
-  closePreview = () => this.setState({ previewing: null });
+  closePreview = () => {
+    if (this.state.previewUrl) window.URL.revokeObjectURL(this.state.previewUrl);
+    this.setState({ previewing: null, previewUrl: null });
+  };
 
   renderPreview = () => {
-    const { previewing } = this.state;
+    const { previewing, previewUrl } = this.state;
     if (!previewing) return null;
-    const url = attachmentDownloadUrl(previewing);
+    const url = previewUrl;
     const mime = previewing.mimeType || '';
     return (
       <Dialog open onClose={this.closePreview} fullWidth maxWidth="md">
         <DialogTitle>{previewing.filename}</DialogTitle>
         <DialogContent>
           <div className={this.props.classes.previewBox}>
-            {mime.startsWith('image/') && (
+            {!url && <CircularProgress />}
+            {url && mime.startsWith('image/') && (
               <img src={url} alt={previewing.filename} style={{ maxWidth: '100%' }} />
             )}
-            {mime.startsWith('video/') && (
+            {url && mime.startsWith('video/') && (
               // eslint-disable-next-line jsx-a11y/media-has-caption
               <video src={url} controls style={{ maxWidth: '100%' }} />
             )}
-            {mime.startsWith('audio/') && (
+            {url && mime.startsWith('audio/') && (
               // eslint-disable-next-line jsx-a11y/media-has-caption
               <audio src={url} controls style={{ width: '100%' }} />
             )}
-            {mime === 'application/pdf' && (
+            {url && mime === 'application/pdf' && (
               <iframe
                 title={previewing.filename}
                 src={url}

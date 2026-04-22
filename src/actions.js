@@ -10,6 +10,7 @@ import {
   decodeId,
   openBlob,
   formatQuery,
+  apiHeaders,
 } from "@openimis/fe-core";
 import { ACTION_TYPE } from "./reducer";
 import { FETCH_INDIVIDUAL_REF } from "./constants";
@@ -585,13 +586,22 @@ export function attachmentDownloadUrl(attachment) {
 }
 
 export function downloadAttachment(attach) {
-  return () => {
+  return async () => {
+    const response = await fetch(attachmentDownloadUrl(attach), {
+      method: "GET",
+      credentials: "same-origin",
+      headers: apiHeaders,
+    });
+    if (!response.ok) return;
+    const blob = await response.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = attachmentDownloadUrl(attach);
+    link.href = objectUrl;
     link.download = attach.filename || "attachment";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.URL.revokeObjectURL(objectUrl);
   };
 }
 
@@ -610,7 +620,8 @@ export function uploadTicketAttachments(ticketUuid, files, opts = {}) {
     try {
       const response = await fetch(`${baseApiUrl}/grievance_social_protection/upload`, {
         method: "POST",
-        credentials: "include",
+        credentials: "same-origin",
+        headers: apiHeaders,
         body: form,
       });
       const data = await response.json();
