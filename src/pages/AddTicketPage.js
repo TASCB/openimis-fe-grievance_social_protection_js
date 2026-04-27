@@ -423,13 +423,8 @@ class AddTicketPage extends Component {
                         onChange={(v) => this.setState({ paymentYear: v, isSaved: false })}
                         options={[
                           { value: null, label: "-" },
-                          ...Array.from(
-                            { length: new Date().getFullYear() - 2020 + 1 },
-                            (_, i) => {
-                              const y = new Date().getFullYear() - i;
-                              return { value: y, label: String(y) };
-                            },
-                          ),
+                          { value: new Date().getFullYear(), label: String(new Date().getFullYear()) },
+                          { value: new Date().getFullYear() - 1, label: String(new Date().getFullYear() - 1) },
                         ]}
                         readOnly={isSaved}
                       />
@@ -445,6 +440,7 @@ class AddTicketPage extends Component {
                     required={false}
                     onChange={(v) => this.updateAttribute("dateOfIncident", v)}
                     readOnly={isSaved}
+                    minDate={new Date(new Date().getFullYear() - 1, 0, 1)}
                     maxDate={new Date()}
                   />
                 </Grid>

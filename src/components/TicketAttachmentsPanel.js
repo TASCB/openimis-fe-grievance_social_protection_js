@@ -18,8 +18,7 @@ import VideocamIcon from '@material-ui/icons/Videocam';
 import AudiotrackIcon from '@material-ui/icons/Audiotrack';
 import PictureAsPdfIcon from '@material-ui/icons/PictureAsPdf';
 import DescriptionIcon from '@material-ui/icons/Description';
-import DeleteIcon from '@material-ui/icons/Delete';
-import { FormattedMessage, formatMessage, apiHeaders } from '@openimis/fe-core';
+import { FormattedMessage, formatMessage } from '@openimis/fe-core';
 import {
   fetchTicketAttachments, uploadTicketAttachments,
   clearPendingAttachments, attachmentDownloadUrl, downloadAttachment,
@@ -167,7 +166,6 @@ class TicketAttachmentsPanel extends Component {
       const response = await fetch(attachmentDownloadUrl(attachment), {
         method: 'GET',
         credentials: 'same-origin',
-        headers: apiHeaders,
       });
       if (!response.ok) return;
       const blob = await response.blob();

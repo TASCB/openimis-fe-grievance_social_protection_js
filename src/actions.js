@@ -8,9 +8,7 @@ import {
   formatPageQuery,
   baseApiUrl,
   decodeId,
-  openBlob,
   formatQuery,
-  apiHeaders,
 } from "@openimis/fe-core";
 import { ACTION_TYPE } from "./reducer";
 import { FETCH_INDIVIDUAL_REF } from "./constants";
@@ -585,12 +583,30 @@ export function attachmentDownloadUrl(attachment) {
   return `${baseApiUrl}/grievance_social_protection/attach?id=${encodeURIComponent(id)}`;
 }
 
+function getCsrfToken() {
+  return document.cookie
+    .split("; ")
+    .find((cookie) => cookie.startsWith("csrftoken="))
+    ?.split("=")[1];
+}
+
+function restHeaders({ multipart = false } = {}) {
+  const headers = {};
+  const csrfToken = getCsrfToken();
+  if (!multipart) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (csrfToken) {
+    headers["X-CSRFToken"] = csrfToken;
+  }
+  return headers;
+}
+
 export function downloadAttachment(attach) {
   return async () => {
     const response = await fetch(attachmentDownloadUrl(attach), {
       method: "GET",
       credentials: "same-origin",
-      headers: apiHeaders,
     });
     if (!response.ok) return;
     const blob = await response.blob();
@@ -621,7 +637,7 @@ export function uploadTicketAttachments(ticketUuid, files, opts = {}) {
       const response = await fetch(`${baseApiUrl}/grievance_social_protection/upload`, {
         method: "POST",
         credentials: "same-origin",
-        headers: apiHeaders,
+        headers: restHeaders({ multipart: true }),
         body: form,
       });
       const data = await response.json();
