@@ -20,6 +20,25 @@ const styles = (theme) => ({
   tableTitle: theme.table.title,
   item: theme.paper.item,
   fullHeight: { height: "100%" },
+  pendingAttachments: {
+    display: "flex",
+    flexWrap: "wrap",
+    marginTop: 8,
+  },
+  pendingAttachment: {
+    display: "flex",
+    alignItems: "center",
+    maxWidth: "100%",
+    margin: 4,
+  },
+  pendingThumbnail: {
+    width: 56,
+    height: 56,
+    objectFit: "cover",
+    borderRadius: 4,
+    border: `1px solid ${theme.palette.divider}`,
+    marginRight: 8,
+  },
 });
 
 class AddTicketPage extends Component {
@@ -31,13 +50,41 @@ class AddTicketPage extends Component {
       benefitPlan: null,
       selectedCategory: null,
       selectedType: null,
+      attachmentErrors: [],
       stateEdited: {
         flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
         channel: "Web",
         priority: "Low",
       },
     };
+    this.previewUrls = new Map();
   }
+
+  componentDidMount() {
+    this.syncPreviewUrls(this.props.pendingAttachments);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.pendingAttachments !== this.props.pendingAttachments) {
+      this.syncPreviewUrls(this.props.pendingAttachments);
+    }
+  }
+
+  componentWillUnmount() {
+    this.previewUrls.forEach((url) => window.URL.revokeObjectURL(url));
+    this.previewUrls.clear();
+  }
+
+  syncPreviewUrls = (files = []) => {
+    const currentFiles = new Set(files || []);
+    (files || []).forEach((file) => this.ensurePreviewUrl(file));
+    this.previewUrls.forEach((url, file) => {
+      if (!currentFiles.has(file)) {
+        window.URL.revokeObjectURL(url);
+        this.previewUrls.delete(file);
+      }
+    });
+  };
 
   isPaymentCategory = () => {
     const name = this.state.selectedCategory?.name ?? this.state.stateEdited?.category ?? "";
@@ -134,6 +181,7 @@ class AddTicketPage extends Component {
       if (!ALLOWED.includes((f.type || "").toLowerCase())) {
         errors.push(`${f.name}: type not allowed`); continue;
       }
+      this.ensurePreviewUrl(f);
       next.push(f);
     }
     this.props.setPendingAttachments(next);
@@ -142,13 +190,29 @@ class AddTicketPage extends Component {
 
   removePending = (idx) => {
     const next = [...(this.props.pendingAttachments || [])];
-    next.splice(idx, 1);
+    const removed = next.splice(idx, 1);
+    removed.forEach((file) => this.revokePreviewUrl(file));
     this.props.setPendingAttachments(next);
+  };
+
+  isImageFile = (file) => (file?.type || "").toLowerCase().startsWith("image/");
+
+  ensurePreviewUrl = (file) => {
+    if (!this.isImageFile(file) || this.previewUrls.has(file)) return;
+    this.previewUrls.set(file, window.URL.createObjectURL(file));
+  };
+
+  revokePreviewUrl = (file) => {
+    const previewUrl = this.previewUrls.get(file);
+    if (!previewUrl) return;
+    window.URL.revokeObjectURL(previewUrl);
+    this.previewUrls.delete(file);
   };
 
   render() {
     const {
       classes,
+      pendingAttachments = [],
       titleone = " Ticket.ComplainantInformation",
       titletwo = " Ticket.DescriptionOfEvents",
       titleParams = { label: EMPTY_STRING },
@@ -162,6 +226,7 @@ class AddTicketPage extends Component {
       selectedCategory,
       selectedType,
     } = this.state;
+    pendingAttachments.forEach((file) => this.ensurePreviewUrl(file));
 
     return (
       <div className={classes.page}>
@@ -512,19 +577,27 @@ class AddTicketPage extends Component {
                       component="span"
                       variant="outlined"
                       startIcon={<CloudUpload />}
-                      disabled={isSaved || (this.props.pendingAttachments?.length || 0) >= 5}
+                      disabled={isSaved || pendingAttachments.length >= 5}
                     >
                       <FormattedMessage module={MODULE_NAME} id="ticket.attachments.selectFiles" />
                     </Button>
                   </label>
-                  <div style={{ marginTop: 8 }}>
-                    {(this.props.pendingAttachments || []).map((f, i) => (
-                      <Chip
-                        key={`${f.name}-${i}`}
-                        label={`${f.name} (${Math.round(f.size / 1024)}KB)`}
-                        onDelete={isSaved ? undefined : () => this.removePending(i)}
-                        style={{ margin: 4 }}
-                      />
+                  <div className={classes.pendingAttachments}>
+                    {pendingAttachments.map((f, i) => (
+                      <div className={classes.pendingAttachment} key={`${f.name}-${f.size}-${i}`}>
+                        {this.isImageFile(f) && (
+                          <img
+                            className={classes.pendingThumbnail}
+                            src={this.previewUrls.get(f)}
+                            alt={f.name}
+                          />
+                        )}
+                        <Chip
+                          label={`${f.name} (${Math.round(f.size / 1024)}KB)`}
+                          onDelete={isSaved ? undefined : () => this.removePending(i)}
+                          style={{ margin: 4 }}
+                        />
+                      </div>
                     ))}
                   </div>
                   {(this.state.attachmentErrors || []).map((e) => (

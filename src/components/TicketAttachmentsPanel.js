@@ -42,6 +42,13 @@ const styles = (theme) => ({
   tableTitle: theme.table.title,
   item: theme.paper.item,
   previewBox: { width: '100%', maxHeight: '70vh', overflow: 'auto' },
+  thumbnail: {
+    width: 48,
+    height: 48,
+    objectFit: 'cover',
+    borderRadius: 4,
+    border: `1px solid ${theme.palette.divider}`,
+  },
 });
 
 function iconFor(mime) {
@@ -181,6 +188,20 @@ class TicketAttachmentsPanel extends Component {
     this.setState({ previewing: null, previewUrl: null });
   };
 
+  renderAttachmentIcon = (attachment) => {
+    const mime = attachment.mimeType || '';
+    if (mime.startsWith('image/')) {
+      return (
+        <img
+          className={this.props.classes.thumbnail}
+          src={attachmentDownloadUrl(attachment)}
+          alt={attachment.filename}
+        />
+      );
+    }
+    return iconFor(mime);
+  };
+
   renderPreview = () => {
     const { previewing, previewUrl } = this.state;
     if (!previewing) return null;
@@ -268,7 +289,7 @@ class TicketAttachmentsPanel extends Component {
             )}
           </Grid>
         </Grid>
-        {errors.length > 0 && (
+        {(errors.length > 0 || uploadErrors.length > 0) && (
           <Grid container className={classes.item}>
             <Grid item xs={12}>
               {errors.map((e) => (
@@ -290,7 +311,7 @@ class TicketAttachmentsPanel extends Component {
           )}
           {attachments.map((att) => (
             <ListItem key={att.id}>
-              <ListItemIcon>{iconFor(att.mimeType)}</ListItemIcon>
+              <ListItemIcon>{this.renderAttachmentIcon(att)}</ListItemIcon>
               <ListItemText primary={att.filename} secondary={att.mimeType} />
               <ListItemSecondaryAction>
                 {isPreviewable(att.mimeType) && (

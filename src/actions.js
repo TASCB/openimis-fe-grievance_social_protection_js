@@ -43,6 +43,11 @@ const GRIEVANCE_TYPE_PROJECTION = () => [
 const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "isActive"];
 const GRIEVANCE_CHANNEL_PROJECTION = () => ["id", "code", "name", "isActive"];
 
+function formatIdGQL(id) {
+  if (!id) return id;
+  return isBase64Encoded(id) ? decodeId(id) : id;
+}
+
 export function fetchCategoryForPicker(mm, filters) {
   const payload = formatPageQueryWithCount("category", filters, CATEGORY_FULL_PROJECTION(mm));
   return graphql(payload, "CATEGORY_CATEGORY");
@@ -278,7 +283,7 @@ export function resolveTicketGQL(ticket) {
 
 export function formatGrievanceCategoryGQL(category) {
   return `
-    ${category.id ? `id: "${formatGQLString(category.id)}"` : ""}
+    ${category.id ? `id: "${formatGQLString(formatIdGQL(category.id))}"` : ""}
     ${category.code ? `code: "${formatGQLString(category.code)}"` : ""}
     ${category.name ? `name: "${formatGQLString(category.name)}"` : ""}
     ${typeof category.isActive === "boolean" ? `isActive: ${category.isActive}` : ""}
@@ -287,17 +292,17 @@ export function formatGrievanceCategoryGQL(category) {
 
 export function formatGrievanceTypeGQL(type) {
   return `
-    ${type.id ? `id: "${formatGQLString(type.id)}"` : ""}
+    ${type.id ? `id: "${formatGQLString(formatIdGQL(type.id))}"` : ""}
     ${type.code ? `code: "${formatGQLString(type.code)}"` : ""}
     ${type.name ? `name: "${formatGQLString(type.name)}"` : ""}
     ${typeof type.isActive === "boolean" ? `isActive: ${type.isActive}` : ""}
-    ${type.category?.id ? `categoryId: "${formatGQLString(type.category.id)}"` : ""}
+    ${type.category?.id ? `categoryId: "${formatGQLString(formatIdGQL(type.category.id))}"` : ""}
   `;
 }
 
 export function formatGrievanceChannelGQL(channel) {
   return `
-    ${channel.id ? `id: "${formatGQLString(channel.id)}"` : ""}
+    ${channel.id ? `id: "${formatGQLString(formatIdGQL(channel.id))}"` : ""}
     ${channel.code ? `code: "${formatGQLString(channel.code)}"` : ""}
     ${channel.name ? `name: "${formatGQLString(channel.name)}"` : ""}
     ${typeof channel.isActive === "boolean" ? `isActive: ${channel.isActive}` : ""}

@@ -7,12 +7,15 @@ import { injectIntl } from 'react-intl';
 import { connect } from 'react-redux';
 import LockOpenIcon from '@material-ui/icons/LockOpen';
 import {
-  Form, formatMessageWithValues, journalize, ProgressOrError, withModulesManager, formatMessage,
+  Form, formatGQLString, formatMessageWithValues, journalize, ProgressOrError,
+  withModulesManager, formatMessage,
 } from '@openimis/fe-core';
 import { bindActionCreators } from 'redux';
 import {
   clearTicket,
+  clearPendingAttachments,
   fetchComments, fetchGrievanceConfiguration, fetchTicket, reopenTicket,
+  uploadTicketAttachments,
 } from '../actions';
 import { ticketLabel } from '../utils/utils';
 import EditTicketPage from '../pages/EditTicketPage';
@@ -77,13 +80,9 @@ class TicketForm extends Component {
     } else if (prevProps.submittingMutation && !this.props.submittingMutation) {
       this.props.journalize(this.props.mutation);
       this.setState((state) => ({ reset: state.reset + 1 }));
-      const createdOrUpdatedTicketId = this.props?.ticket?.id || this.props?.mutation?.id;
-      if (createdOrUpdatedTicketId) {
-        this.props.fetchTicket(
-          this.props.modulesManager,
-          [`id: "${createdOrUpdatedTicketId}"`],
-        );
-      }
+      this.uploadPendingAttachmentsOnCreate()
+        .catch(() => null)
+        .then(this.fetchChangedTicket);
     }
   }
 
@@ -96,6 +95,42 @@ class TicketForm extends Component {
     this.props.fetchComments(
       this.state.ticket,
     );
+  };
+
+  fetchChangedTicket = () => {
+    const changedTicketId = this.props?.mutation?.id
+      || (this.state.ticketUuid ? this.props?.ticket?.id : null);
+    const clientMutationId = this.props?.mutation?.clientMutationId;
+
+    if (changedTicketId) {
+      this.props.fetchTicket(
+        this.props.modulesManager,
+        [`id: "${changedTicketId}"`],
+      );
+      return;
+    }
+
+    if (clientMutationId) {
+      this.props.fetchTicket(
+        this.props.modulesManager,
+        [`clientMutationId: "${formatGQLString(clientMutationId)}"`],
+      );
+    }
+  };
+
+  uploadPendingAttachmentsOnCreate = async () => {
+    const { pendingAttachments, mutation } = this.props;
+    const clientMutationId = mutation?.clientMutationId;
+    if (this.state.ticketUuid || !clientMutationId || !pendingAttachments?.length) return;
+
+    const result = await this.props.uploadTicketAttachments(
+      null,
+      pendingAttachments,
+      { clientMutationId },
+    );
+    if (!result?.error && (!result?.errors || result.errors.length === 0)) {
+      this.props.clearPendingAttachments();
+    }
   };
 
   canSave = () => {
@@ -186,6 +221,7 @@ const mapStateToProps = (state, props) => ({
   errorTicket: state.grievanceSocialProtection.errorTicket,
   fetchedTicket: state.grievanceSocialProtection.fetchedTicket,
   ticket: state.grievanceSocialProtection.ticket,
+  pendingAttachments: state.grievanceSocialProtection.pendingAttachments,
   submittingMutation: state.grievanceSocialProtection.submittingMutation,
   mutation: state.grievanceSocialProtection.mutation,
   grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
@@ -196,6 +232,8 @@ const mapDispatchToProps = (dispatch) => bindActionCreators({
   fetchComments,
   reopenTicket,
   fetchGrievanceConfiguration,
+  uploadTicketAttachments,
+  clearPendingAttachments,
   clearTicket,
   journalize,
 }, dispatch);
