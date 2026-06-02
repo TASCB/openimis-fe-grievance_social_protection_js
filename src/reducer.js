@@ -15,6 +15,7 @@ import { CLEAR, ERROR, REQUEST, SUCCESS } from "./utils/action-type";
 
 export const ACTION_TYPE = {
   GET_GRIEVANCE_CONFIGURATION: "GET_GRIEVANCE_CONFIGURATION",
+  GRIEVANCE_REPORTS: "GRIEVANCE_REPORTS",
   MUTATION: "GRIEVANCE_SOCIAL_PROTECTION_MUTATION",
   CLOSE_TICKET: "CLOSE_TICKET",
   RESOLVE_BY_COMMENT: "RESOLVE_BY_COMMENT",
@@ -89,6 +90,11 @@ function reducer(
     fetchedGrievanceConfig: false,
     errorGrievanceConfig: null,
     grievanceConfig: null,
+
+    fetchingGrievanceReports: false,
+    fetchedGrievanceReports: false,
+    errorGrievanceReports: null,
+    grievanceReports: [],
 
     submittingMutation: false,
     mutation: {},
@@ -257,11 +263,10 @@ function reducer(
         ...state,
         fetchingGrievanceCategory: false,
         fetchedGrievanceCategory: true,
-        grievanceCategory: parseData(action.payload.data.grievanceCategories)
-          .map((category) => ({
-            ...category,
-            id: decodeId(category.id),
-          }))?.[0],
+        grievanceCategory: parseData(action.payload.data.grievanceCategories).map((category) => ({
+          ...category,
+          id: decodeId(category.id),
+        }))?.[0],
         errorGrievanceCategory: formatGraphQLError(action.payload),
       };
     case "GRIEVANCE_CATEGORY_CATEGORY_ERR":
@@ -313,12 +318,11 @@ function reducer(
         ...state,
         fetchingGrievanceType: false,
         fetchedGrievanceType: true,
-        grievanceType: parseData(action.payload.data.grievanceTypes)
-          .map((type) => ({
-            ...type,
-            id: decodeId(type.id),
-            category: type.category ? { ...type.category, id: decodeId(type.category.id) } : null,
-          }))?.[0],
+        grievanceType: parseData(action.payload.data.grievanceTypes).map((type) => ({
+          ...type,
+          id: decodeId(type.id),
+          category: type.category ? { ...type.category, id: decodeId(type.category.id) } : null,
+        }))?.[0],
         errorGrievanceType: formatGraphQLError(action.payload),
       };
     case "GRIEVANCE_TYPE_TYPE_ERR":
@@ -369,11 +373,10 @@ function reducer(
         ...state,
         fetchingGrievanceChannel: false,
         fetchedGrievanceChannel: true,
-        grievanceChannel: parseData(action.payload.data.grievanceChannels)
-          .map((channel) => ({
-            ...channel,
-            id: decodeId(channel.id),
-          }))?.[0],
+        grievanceChannel: parseData(action.payload.data.grievanceChannels).map((channel) => ({
+          ...channel,
+          id: decodeId(channel.id),
+        }))?.[0],
         errorGrievanceChannel: formatGraphQLError(action.payload),
       };
     case "GRIEVANCE_CHANNEL_CHANNEL_ERR":
@@ -488,6 +491,30 @@ function reducer(
         fetchedGrievanceConfig: false,
         errorGrievanceConfig: formatGraphQLError(action.payload),
         grievanceConfig: null,
+      };
+    case REQUEST(ACTION_TYPE.GRIEVANCE_REPORTS):
+      return {
+        ...state,
+        fetchingGrievanceReports: true,
+        fetchedGrievanceReports: false,
+        errorGrievanceReports: null,
+        grievanceReports: [],
+      };
+    case SUCCESS(ACTION_TYPE.GRIEVANCE_REPORTS):
+      return {
+        ...state,
+        fetchingGrievanceReports: false,
+        fetchedGrievanceReports: true,
+        errorGrievanceReports: formatGraphQLError(action.payload),
+        grievanceReports: action.payload.data.grievanceReports || [],
+      };
+    case ERROR(ACTION_TYPE.GRIEVANCE_REPORTS):
+      return {
+        ...state,
+        fetchingGrievanceReports: false,
+        fetchedGrievanceReports: false,
+        errorGrievanceReports: formatServerError(action.payload),
+        grievanceReports: [],
       };
     case REQUEST(ACTION_TYPE.MUTATION):
       return dispatchMutationReq(state, action);

@@ -22,6 +22,27 @@ const GRIEVANCE_CONFIGURATION_PROJECTION = () => [
   "grievanceDefaultResolutionsByCategory{category, resolutionTime}",
 ];
 
+const GRIEVANCE_REPORT_PROJECTION = () => [
+  "report",
+  "label",
+  "count",
+  "category",
+  "channel",
+  "status",
+  "paaId",
+  "paaName",
+  "agentId",
+  "agentName",
+  "ticketId",
+  "ticketCode",
+  "ticketTitle",
+  "dateReceived",
+  "dateClosed",
+  "dueDate",
+  "closureDays",
+  "overdueDays",
+];
+
 const CATEGORY_FULL_PROJECTION = () => [
   "id",
   "uuid",
@@ -72,12 +93,20 @@ export function fetchGrievanceCategory(mm, filters) {
 }
 
 export function fetchGrievanceTypes(mm, filters = []) {
-  const payload = formatPageQueryWithCount("grievanceTypes", filters, GRIEVANCE_TYPE_PROJECTION(mm));
+  const payload = formatPageQueryWithCount(
+    "grievanceTypes",
+    filters,
+    GRIEVANCE_TYPE_PROJECTION(mm),
+  );
   return graphql(payload, "GRIEVANCE_TYPE_TYPES");
 }
 
 export function fetchGrievanceType(mm, filters = []) {
-  const payload = formatPageQueryWithCount("grievanceTypes", filters, GRIEVANCE_TYPE_PROJECTION(mm));
+  const payload = formatPageQueryWithCount(
+    "grievanceTypes",
+    filters,
+    GRIEVANCE_TYPE_PROJECTION(mm),
+  );
   return graphql(payload, "GRIEVANCE_TYPE_TYPE");
 }
 
@@ -127,6 +156,15 @@ export function fetchTicketSummaries(mm, filters) {
   ];
   const payload = formatPageQueryWithCount("tickets", filters, projections);
   return graphql(payload, "TICKET_TICKETS");
+}
+
+export function fetchGrievanceReports(mm, params) {
+  const payload = formatQuery("grievanceReports", params, GRIEVANCE_REPORT_PROJECTION());
+  return graphql(payload, [
+    REQUEST(ACTION_TYPE.GRIEVANCE_REPORTS),
+    SUCCESS(ACTION_TYPE.GRIEVANCE_REPORTS),
+    ERROR(ACTION_TYPE.GRIEVANCE_REPORTS),
+  ]);
 }
 
 export function fetchTicket(mm, filters) {
@@ -363,11 +401,7 @@ export function createGrievanceType(type, clientMutationLabel) {
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
-    [
-      "GRIEVANCE_TYPE_MUTATION_REQ",
-      "GRIEVANCE_TYPE_CREATE_RESP",
-      "GRIEVANCE_TYPE_MUTATION_ERR",
-    ],
+    ["GRIEVANCE_TYPE_MUTATION_REQ", "GRIEVANCE_TYPE_CREATE_RESP", "GRIEVANCE_TYPE_MUTATION_ERR"],
     {
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,
@@ -385,11 +419,7 @@ export function updateGrievanceType(type, clientMutationLabel) {
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
-    [
-      "GRIEVANCE_TYPE_MUTATION_REQ",
-      "GRIEVANCE_TYPE_UPDATE_RESP",
-      "GRIEVANCE_TYPE_MUTATION_ERR",
-    ],
+    ["GRIEVANCE_TYPE_MUTATION_REQ", "GRIEVANCE_TYPE_UPDATE_RESP", "GRIEVANCE_TYPE_MUTATION_ERR"],
     {
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,
@@ -476,11 +506,7 @@ export function deleteGrievanceType(type, clientMutationLabel) {
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
-    [
-      "GRIEVANCE_TYPE_MUTATION_REQ",
-      "GRIEVANCE_TYPE_DELETE_RESP",
-      "GRIEVANCE_TYPE_MUTATION_ERR",
-    ],
+    ["GRIEVANCE_TYPE_MUTATION_REQ", "GRIEVANCE_TYPE_DELETE_RESP", "GRIEVANCE_TYPE_MUTATION_ERR"],
     {
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,
@@ -766,11 +792,7 @@ export function closeTicket(ticket, closingComment, commenter, commenterType, cl
   const requestedDateTime = new Date();
   return graphql(
     mutation.payload,
-    [
-      REQUEST(ACTION_TYPE.MUTATION),
-      SUCCESS(ACTION_TYPE.CLOSE_TICKET),
-      ERROR(ACTION_TYPE.MUTATION),
-    ],
+    [REQUEST(ACTION_TYPE.MUTATION), SUCCESS(ACTION_TYPE.CLOSE_TICKET), ERROR(ACTION_TYPE.MUTATION)],
     {
       clientMutationId: mutation.clientMutationId,
       clientMutationLabel,

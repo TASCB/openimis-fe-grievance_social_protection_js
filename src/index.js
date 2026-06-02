@@ -16,7 +16,7 @@ import CategoryPicker from "./pickers/CategoryPicker";
 import GrievanceConfigurationDialog from "./dialogs/GrievanceConfigurationDialog";
 import ChannelPicker from "./pickers/ChannelPicker";
 import FlagPicker from "./pickers/FlagsPicker";
-import { MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_SEARCH } from "./constants";
+import { GRIEVANCE_REPORT_OPTIONS, MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_SEARCH } from "./constants";
 import TicketTypePicker from "./pickers/TicketTypePicker";
 import TicketCategoryPicker from "./pickers/TicketCategoryPicker";
 import TicketTypesPage from "./pages/TicketTypesPage";
@@ -192,7 +192,7 @@ const DEFAULT_CONFIG = {
     { path: `${ROUTE_TICKET_CATEGORIES_CREATE}`, component: CreateTicketCategoryPage },
     { path: `${ROUTE_TICKET_CATEGORY}/:category_id`, component: ViewTicketCategoryPage },
     { path: `${ROUTE_TICKET_CATEGORY_EDIT}/:category_id`, component: EditTicketCategoryPage },
-    { path: `${ROUTE_TICKET_REPORTS}`, component: TicketReportPage },
+    { path: `${ROUTE_TICKET_REPORTS}/:report?`, component: TicketReportPage },
   ],
   "core.MainMenu": [
     {
@@ -201,13 +201,13 @@ const DEFAULT_CONFIG = {
     },
   ],
   "grievance.MainMenu": [
-    {
-      text: "Reports",
+    ...GRIEVANCE_REPORT_OPTIONS.map((option) => ({
+      text: <FormattedMessage module={MODULE_NAME} id={option.label} />,
       icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_REPORTS}`,
+      route: `/${ROUTE_TICKET_REPORTS}/${option.value}`,
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: "grievance.reports",
-    },
+      id: `grievance.reports.${option.value}`,
+    })),
 
     {
       text: "Categories",

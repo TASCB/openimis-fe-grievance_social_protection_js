@@ -1,248 +1,290 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { injectIntl } from "react-intl";
-import { IconButton, Tooltip } from "@material-ui/core";
-import { withStyles, withTheme } from "@material-ui/core/styles";
 import { connect } from "react-redux";
 import {
-  coreConfirm,
-  journalize,
-  Searcher,
-  withHistory,
-  withModulesManager,
-  formatMessage,
-  historyPush,
-  decodeId,
-} from "@openimis/fe-core";
-import EditIcon from "@material-ui/icons/Edit";
-import { MODULE_NAME, RIGHT_TICKET_EDIT } from "../constants";
-import { fetchTicketSummaries, resolveTicket } from "../actions";
-import EnquiryDialog from "./EnquiryDialog";
+  Button,
+  Grid,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@material-ui/core";
+import SearchIcon from "@material-ui/icons/Search";
+import { withStyles, withTheme } from "@material-ui/core/styles";
+import { ProgressOrError, decodeId, formatMessage, withModulesManager } from "@openimis/fe-core";
+import { GRIEVANCE_REPORT_TYPES, MODULE_NAME } from "../constants";
+import { fetchGrievanceReports } from "../actions";
 import TicketReportFilter from "./TicketReportFilter";
 
 function styles(theme) {
   return {
-    fab: theme.fab,
-    tableTitle: theme.table.title,
     paper: { ...theme.paper.paper, margin: 0 },
-    paperHeader: { ...theme.paper.header, padding: 10 },
-    button: { margin: theme.spacing(1) },
+    paperHeader: { ...theme.paper.header, padding: theme.spacing(1) },
     item: { padding: theme.spacing(1) },
+    table: {
+      tableLayout: "fixed",
+    },
+    emptyRow: {
+      textAlign: "center",
+      padding: theme.spacing(3),
+    },
+    actions: {
+      display: "flex",
+      justifyContent: "flex-end",
+      alignItems: "center",
+    },
   };
 }
 
+const DEFAULT_FILTERS = {
+  report: {
+    id: "report",
+    value: GRIEVANCE_REPORT_TYPES.CATEGORY,
+  },
+};
+
+function resolveReportType(report) {
+  return Object.values(GRIEVANCE_REPORT_TYPES).includes(report)
+    ? report
+    : GRIEVANCE_REPORT_TYPES.CATEGORY;
+}
+
+function safeDecodeId(id) {
+  if (!id) return null;
+  try {
+    return decodeId(id);
+  } catch (e) {
+    return id;
+  }
+}
+
+function normalizeId(value) {
+  if (!value) return null;
+  return safeDecodeId(value.id || value.uuid || value);
+}
+
+function normalizeDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
+function parseLocationId(filters) {
+  const values = Object.values(filters || {});
+  const locationFilter =
+    values.find(({ id, value }) => id === "paa" && value) ||
+    values.find(({ id, value }) => id === "parentLocation" && value) ||
+    values.find(({ id, value }) => id?.toLowerCase().includes("paa") && value) ||
+    values.find(({ filter }) => /(?:paa|parentLocation)\s*:/i.test(filter || ""));
+
+  if (!locationFilter) return null;
+  if (locationFilter.value) return normalizeId(locationFilter.value);
+
+  const match = (locationFilter.filter || "").match(
+    /(?:paa|parentLocation)\s*:\s*"?([^",\s)]+)"?/i,
+  );
+  return match ? safeDecodeId(match[1]) : null;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  return String(value).slice(0, 10);
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined) return "";
+  return value;
+}
+
+function normalizeReport(value) {
+  return value?.value || value || GRIEVANCE_REPORT_TYPES.CATEGORY;
+}
+
+function reportColumns(report, intl) {
+  const t = (id) => formatMessage(intl, MODULE_NAME, id);
+
+  const aggregateColumns = {
+    [GRIEVANCE_REPORT_TYPES.CATEGORY]: [
+      { label: t("grievanceReport.category"), render: (row) => row.category || row.label },
+      { label: t("grievanceReport.count"), render: (row) => row.count },
+    ],
+    [GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES]: [
+      { label: t("grievanceReport.paa"), render: (row) => row.paaName || row.label },
+      { label: t("grievanceReport.count"), render: (row) => row.count },
+    ],
+    [GRIEVANCE_REPORT_TYPES.CHANNEL]: [
+      { label: t("grievanceReport.channel"), render: (row) => row.channel || row.label },
+      { label: t("grievanceReport.count"), render: (row) => row.count },
+    ],
+    [GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS]: [
+      { label: t("grievanceReport.status"), render: (row) => row.status || row.label },
+      { label: t("grievanceReport.count"), render: (row) => row.count },
+    ],
+    [GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA]: [
+      { label: t("grievanceReport.paa"), render: (row) => row.paaName || row.label },
+      { label: t("grievanceReport.count"), render: (row) => row.count },
+      {
+        label: t("grievanceReport.maxOverdueDays"),
+        render: (row) => formatNumber(row.overdueDays),
+      },
+    ],
+  };
+
+  if (aggregateColumns[report]) return aggregateColumns[report];
+
+  return [
+    { label: t("tickets.code"), render: (row) => row.ticketCode },
+    { label: t("tickets.title"), render: (row) => row.ticketTitle },
+    { label: t("grievanceReport.category"), render: (row) => row.category },
+    { label: t("grievanceReport.paa"), render: (row) => row.paaName },
+    { label: t("grievanceReport.agent"), render: (row) => row.agentName },
+    { label: t("grievanceReport.dateReceived"), render: (row) => formatDate(row.dateReceived) },
+    { label: t("grievanceReport.dateClosed"), render: (row) => formatDate(row.dateClosed) },
+    { label: t("tickets.dueDate"), render: (row) => formatDate(row.dueDate) },
+    {
+      label: t("grievanceReport.closureDays"),
+      render: (row) => formatNumber(row.closureDays),
+    },
+    {
+      label: t("grievanceReport.overdueDays"),
+      render: (row) => formatNumber(row.overdueDays),
+    },
+  ];
+}
+
 function TicketReportSearcher({
-  modulesManager,
+  classes,
   intl,
-  history,
-  rights,
-  tickets,
-  ticketsPageInfo,
-  fetchingTickets,
-  fetchedTickets,
-  errorTickets,
-  submittingMutation,
-  mutation,
-  confirmed,
-  cacheFiltersKey,
-  filterPaneContributionsKey,
-  onDoubleClick,
+  modulesManager,
+  reports,
+  fetchingReports,
+  errorReports,
+  initialReport,
 }) {
   const dispatch = useDispatch();
+  const [filters, setFilters] = useState(() => ({
+    ...DEFAULT_FILTERS,
+    report: { id: "report", value: resolveReportType(initialReport) },
+  }));
 
-  const [enquiryOpen, setEnquiryOpen] = useState(false);
-  const [chfid, setChfid] = useState(null);
-  const [confirmedAction, setConfirmedAction] = useState(null);
-  const [reset, setReset] = useState(0);
-  const [showHistoryFilter, setShowHistoryFilter] = useState(false);
-  const [displayVersion, setDisplayVersion] = useState(false);
+  const selectedReport = normalizeReport(filters.report?.value);
 
-  const rowsPerPageOptions = modulesManager.getConf(
-    "fe-grievance_social_protection",
-    "ticketFilter.rowsPerPageOptions",
-    [10, 20, 50, 100],
-  );
-
-  const defaultPageSize = modulesManager.getConf(
-    "fe-grievance_social_protection",
-    "ticketFilter.defaultPageSize",
-    10,
-  );
-
-  // ComponentDidUpdate equivalent
   useEffect(() => {
-    if (!submittingMutation && mutation) {
-      journalize(mutation);
-      setReset((prev) => prev + 1);
-    }
-    if (confirmed && confirmedAction) {
-      confirmedAction();
-    }
-  }, [submittingMutation, mutation, confirmed, confirmedAction]);
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      report: { id: "report", value: resolveReportType(initialReport) },
+    }));
+  }, [initialReport]);
 
-  const fetch = useCallback(
-    (prms) => {
-      setDisplayVersion(showHistoryFilter);
-      dispatch(fetchTicketSummaries(modulesManager, prms));
-    },
-    [dispatch, modulesManager, showHistoryFilter],
-  );
+  const onChangeFilters = useCallback((updates) => {
+    setFilters((previousFilters) => {
+      const nextFilters = { ...previousFilters };
+      updates.forEach(({ id, value, filter }) => {
+        if (!id) return;
+        if (value === null || value === undefined || value === "") {
+          delete nextFilters[id];
+        } else {
+          nextFilters[id] = { id, value, filter };
+        }
+      });
+      if (!nextFilters.report) {
+        nextFilters.report = DEFAULT_FILTERS.report;
+      }
+      return nextFilters;
+    });
+  }, []);
 
-  function rowIdentifier(r) {
-    return r.uuid;
-  }
+  const queryParams = useMemo(() => {
+    const params = [`report: "${selectedReport}"`];
+    const dateFrom = normalizeDate(filters.dateFrom?.value);
+    const dateTo = normalizeDate(filters.dateTo?.value);
+    const agentId = normalizeId(filters.agent?.value);
+    const paaId = parseLocationId(filters);
 
-  function isShowHistory() {
-    return displayVersion;
-  }
+    if (dateFrom) params.push(`dateFrom: "${dateFrom}"`);
+    if (dateTo) params.push(`dateTo: "${dateTo}"`);
+    if (agentId) params.push(`agentId: "${agentId}"`);
+    if (paaId) params.push(`paaId: "${paaId}"`);
+    return params;
+  }, [filters, selectedReport]);
 
-  function filtersToQueryParams(state) {
-    const prms = Object.keys(state.filters)
-      .filter((f) => !!state.filters[f].filter)
-      .map((f) => state.filters[f].filter);
-    prms.push(`first: ${state.pageSize}`);
-    if (state.afterCursor) prms.push(`after: "${state.afterCursor}"`);
-    if (state.beforeCursor) prms.push(`before: "${state.beforeCursor}"`);
-    if (state.orderBy) prms.push(`orderBy: ["${state.orderBy}"]`);
-    return prms;
-  }
+  const fetchReports = useCallback(() => {
+    dispatch(fetchGrievanceReports(modulesManager, queryParams));
+  }, [dispatch, modulesManager, queryParams]);
 
-  function headers() {
-    return [
-      "tickets.code",
-      "tickets.category",
-      "tickets.type",
-      "tickets.status",
-      "tickets.reporter",
-      "tickets.dateOfIncident",
-      isShowHistory() ? "tickets.version" : "",
-    ];
-  }
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
-  function sorts() {
-    return [
-      ["code", true],
-      ["category", true],
-      ["type", true],
-      ["reporter", true],
-      ["status", true],
-    ];
-  }
-
-  function itemFormatters() {
-    const formatters = [
-      (ticket) => ticket.code,
-      (ticket) => ticket.category,
-      (ticket) => ticket.reporter,
-      (ticket) => ticket.status,
-      (ticket) => (isShowHistory() ? ticket?.version : null),
-    ];
-
-    if (rights.includes(RIGHT_TICKET_EDIT)) {
-      formatters.push((ticket) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "editButtonTooltip")}>
-          <IconButton
-            disabled={ticket?.isHistory}
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticket",
-                [decodeId(ticket.id)],
-                false,
-              )
-            }
-          >
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-    return formatters;
-  }
-
-  function rowDisabled(selection, i) {
-    return !!i.validityTo;
-  }
-
-  function rowLocked(selection, i) {
-    return !!i.clientMutationId;
-  }
-
-  function filterPane({ filters, onChangeFilters }) {
-    return (
-      <TicketReportFilter
-        filters={filters}
-        onChangeFilters={onChangeFilters}
-        setShowHistoryFilter={setShowHistoryFilter}
-      />
-    );
-  }
+  const columns = reportColumns(selectedReport, intl);
 
   return (
-    <>
-      <EnquiryDialog
-        open={enquiryOpen}
-        chfid={chfid}
-        onClose={() => {
-          setEnquiryOpen(false);
-          setChfid(null);
-        }}
-      />
-      <Searcher
-        module={MODULE_NAME}
-        cacheFiltersKey={cacheFiltersKey}
-        FilterPane={filterPane}
-        filterPaneContributionsKey={filterPaneContributionsKey}
-        items={tickets}
-        itemsPageInfo={ticketsPageInfo}
-        fetchingItems={fetchingTickets}
-        fetchedItems={fetchedTickets}
-        errorItems={errorTickets}
-        tableTitle={"Grievance reports"}
-        rowsPerPageOptions={rowsPerPageOptions}
-        defaultPageSize={defaultPageSize}
-        fetch={fetch}
-        rowIdentifier={rowIdentifier}
-        filtersToQueryParams={filtersToQueryParams}
-        defaultOrderBy="-dateCreated"
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={sorts}
-        rowDisabled={rowDisabled}
-        rowLocked={rowLocked}
-        onDoubleClick={(i) => !i.clientMutationId && onDoubleClick(i)}
-        reset={reset}
-      />
-    </>
+    <Paper className={classes.paper}>
+      <Grid container className={classes.paperHeader}>
+        <Grid item xs={12} sm={8}>
+          <Typography variant="h6">
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.title")}
+          </Typography>
+        </Grid>
+        <Grid item xs={12} sm={4} className={classes.actions}>
+          <Button
+            color="primary"
+            variant="contained"
+            startIcon={<SearchIcon />}
+            onClick={fetchReports}
+            disabled={fetchingReports}
+          >
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.run")}
+          </Button>
+        </Grid>
+      </Grid>
+
+      <Grid container className={classes.item}>
+        <TicketReportFilter filters={filters} onChangeFilters={onChangeFilters} />
+      </Grid>
+
+      <ProgressOrError progress={fetchingReports} error={errorReports} />
+
+      <Table size="small" className={classes.table}>
+        <TableHead>
+          <TableRow>
+            {columns.map((column) => (
+              <TableCell key={column.label}>{column.label}</TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {reports.length === 0 && !fetchingReports ? (
+            <TableRow>
+              <TableCell colSpan={columns.length} className={classes.emptyRow}>
+                {formatMessage(intl, MODULE_NAME, "grievanceReport.noResults")}
+              </TableCell>
+            </TableRow>
+          ) : (
+            reports.map((row, rowIndex) => (
+              <TableRow key={`${row.report}-${row.ticketId || row.label || rowIndex}`}>
+                {columns.map((column) => (
+                  <TableCell key={column.label}>{column.render(row)}</TableCell>
+                ))}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </Paper>
   );
 }
 
 const mapStateToProps = (state) => ({
-  rights: state.core?.user?.i_user?.rights || [],
-  tickets: state.grievanceSocialProtection.tickets,
-  ticketsPageInfo: state.grievanceSocialProtection.ticketsPageInfo,
-  fetchingTickets: state.grievanceSocialProtection.fetchingTickets,
-  fetchedTickets: state.grievanceSocialProtection.fetchedTickets,
-  errorTickets: state.grievanceSocialProtection.errorTickets,
-  submittingMutation: state.grievanceSocialProtection.submittingMutation,
-  mutation: state.grievanceSocialProtection.mutation,
-  confirmed: state.core.confirmed,
+  reports: state.grievanceSocialProtection.grievanceReports || [],
+  fetchingReports: state.grievanceSocialProtection.fetchingGrievanceReports,
+  errorReports: state.grievanceSocialProtection.errorGrievanceReports,
 });
 
 export default withModulesManager(
-  withHistory(
-    injectIntl(
-      withTheme(
-        withStyles(styles)(
-          connect(mapStateToProps, {
-            fetchTicketSummaries,
-            resolveTicket,
-            journalize,
-            coreConfirm,
-          })(TicketReportSearcher),
-        ),
-      ),
-    ),
-  ),
+  injectIntl(withTheme(withStyles(styles)(connect(mapStateToProps)(TicketReportSearcher)))),
 );
