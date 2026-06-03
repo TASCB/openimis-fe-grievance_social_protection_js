@@ -61,12 +61,20 @@ const GRIEVANCE_TYPE_PROJECTION = () => [
   "categoryName",
 ];
 
-const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "isActive"];
+const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "timeline", "isActive"];
 const GRIEVANCE_CHANNEL_PROJECTION = () => ["id", "code", "name", "isActive"];
 
 function formatIdGQL(id) {
   if (!id) return id;
   return isBase64Encoded(id) ? decodeId(id) : id;
+}
+
+function formatTimelineGQL(timeline) {
+  if (timeline === undefined || timeline === null || timeline === "") return "";
+  const parsedTimeline = Number.parseInt(timeline, 10);
+  return Number.isNaN(parsedTimeline) || parsedTimeline < 0
+    ? ""
+    : `timeline: ${parsedTimeline}`;
 }
 
 export function fetchCategoryForPicker(mm, filters) {
@@ -324,6 +332,7 @@ export function formatGrievanceCategoryGQL(category) {
     ${category.id ? `id: "${formatGQLString(formatIdGQL(category.id))}"` : ""}
     ${category.code ? `code: "${formatGQLString(category.code)}"` : ""}
     ${category.name ? `name: "${formatGQLString(category.name)}"` : ""}
+    ${formatTimelineGQL(category.timeline)}
     ${typeof category.isActive === "boolean" ? `isActive: ${category.isActive}` : ""}
   `;
 }

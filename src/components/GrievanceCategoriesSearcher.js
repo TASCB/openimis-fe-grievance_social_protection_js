@@ -109,6 +109,7 @@ function GrievanceCategoriesSearcher({
   const itemFormatters = () => {
     const formatters = [
       (category) => category.name,
+      (category) => category.timeline,
       (category) =>
         category.isActive
           ? formatMessage(intl, MODULE_NAME, "status.active")
@@ -170,6 +171,7 @@ function GrievanceCategoriesSearcher({
 
   const headers = () => [
     "grievanceCategory.name",
+    "grievanceCategory.timeline",
     "grievanceCategory.status",
     "",
     ...(rights.includes(RIGHT_TICKET_EDIT) ? [""] : []),
@@ -201,6 +203,7 @@ function GrievanceCategoriesSearcher({
         itemFormatters={itemFormatters}
         sorts={() => [
           ["name", true],
+          ["timeline", true],
         ]}
         onDoubleClick={(category) =>
           historyPush(

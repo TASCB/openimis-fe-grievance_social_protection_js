@@ -59,7 +59,7 @@ const styles = (theme) => ({
 });
 
 function newCategory() {
-  return { code: "", name: "", isActive: true };
+  return { code: "", name: "", timeline: 0, isActive: true };
 }
 
 function GrievanceCategoryFormPage({
@@ -107,7 +107,8 @@ function GrievanceCategoryFormPage({
     previousSubmittingMutation.current = submittingMutation;
   }, [submittingMutation, mutation, journalize, modulesManager, history]);
 
-  const canSave = () => !!edited.name;
+  const timeline = Number.parseInt(edited.timeline, 10);
+  const canSave = () => !!edited.name && !Number.isNaN(timeline) && timeline >= 0;
 
   const save = () => {
     if (!canSave()) return;
@@ -165,7 +166,7 @@ function GrievanceCategoryFormPage({
             {formatMessageWithValues(intl, MODULE_NAME, titleKey, titleValues)}
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <TextInput
                 module={MODULE_NAME}
                 label="grievanceCategory.code"
@@ -174,7 +175,7 @@ function GrievanceCategoryFormPage({
                 onChange={(code) => setEdited((prev) => ({ ...prev, code }))}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <TextInput
                 module={MODULE_NAME}
                 label="grievanceCategory.name"
@@ -182,6 +183,18 @@ function GrievanceCategoryFormPage({
                 required
                 readOnly={readOnly}
                 onChange={(name) => setEdited((prev) => ({ ...prev, name }))}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextInput
+                module={MODULE_NAME}
+                label="grievanceCategory.timeline"
+                value={edited.timeline ?? ""}
+                required
+                readOnly={readOnly}
+                type="number"
+                inputProps={{ min: 0 }}
+                onChange={(timeline) => setEdited((prev) => ({ ...prev, timeline }))}
               />
             </Grid>
             <Grid item xs={12}>

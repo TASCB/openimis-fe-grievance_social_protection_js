@@ -16,7 +16,12 @@ import CategoryPicker from "./pickers/CategoryPicker";
 import GrievanceConfigurationDialog from "./dialogs/GrievanceConfigurationDialog";
 import ChannelPicker from "./pickers/ChannelPicker";
 import FlagPicker from "./pickers/FlagsPicker";
-import { GRIEVANCE_REPORT_OPTIONS, MODULE_NAME, RIGHT_TICKET_ADD, RIGHT_TICKET_SEARCH } from "./constants";
+import {
+  GRIEVANCE_REPORT_OPTIONS,
+  MODULE_NAME,
+  RIGHT_TICKET_ADD,
+  RIGHT_TICKET_SEARCH,
+} from "./constants";
 import TicketTypePicker from "./pickers/TicketTypePicker";
 import TicketCategoryPicker from "./pickers/TicketCategoryPicker";
 import TicketTypesPage from "./pages/TicketTypesPage";
@@ -201,34 +206,12 @@ const DEFAULT_CONFIG = {
     },
   ],
   "grievance.MainMenu": [
-    ...GRIEVANCE_REPORT_OPTIONS.map((option) => ({
-      text: <FormattedMessage module={MODULE_NAME} id={option.label} />,
-      icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_REPORTS}/${option.value}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: `grievance.reports.${option.value}`,
-    })),
-
     {
-      text: "Categories",
-      icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_CATEGORIES}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: "grievance.categories",
-    },
-    {
-      text: "Types",
-      icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_TYPES}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: "grievance.types",
-    },
-    {
-      text: "Channels",
-      icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_CHANNELS}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: "grievance.channels",
+      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.add" />,
+      icon: <AddCircleOutline />,
+      route: `/${ROUTE_TICKET_NEW_TICKET}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_ADD),
+      id: "grievance.add",
     },
     {
       text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.grievances" />,
@@ -237,6 +220,34 @@ const DEFAULT_CONFIG = {
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
       id: "grievance.grievances",
     },
+    {
+      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.categories" />,
+      icon: <ListAlt />,
+      route: `/${ROUTE_TICKET_CATEGORIES}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.categories",
+    },
+    {
+      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.types" />,
+      icon: <ListAlt />,
+      route: `/${ROUTE_TICKET_TYPES}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.types",
+    },
+    {
+      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.channels" />,
+      icon: <ListAlt />,
+      route: `/${ROUTE_TICKET_CHANNELS}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.channels",
+    },
+    ...GRIEVANCE_REPORT_OPTIONS.map((option) => ({
+      text: <FormattedMessage module={MODULE_NAME} id={option.label} />,
+      icon: <ListAlt />,
+      route: `/${ROUTE_TICKET_REPORTS}/${option.value}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: `grievance.reports.${option.value}`,
+    })),
   ],
 };
 
