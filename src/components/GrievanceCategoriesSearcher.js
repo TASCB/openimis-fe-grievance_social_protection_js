@@ -32,6 +32,33 @@ function styles(theme) {
   return {
     paper: { ...theme.paper.paper, margin: 0 },
     paperHeader: { ...theme.paper.header, padding: 10 },
+    searcher: {
+      "& table thead tr th:last-child, & table tbody tr td:last-child": {
+        width: 116,
+        minWidth: 116,
+        maxWidth: 116,
+        paddingLeft: theme.spacing(0.5),
+        paddingRight: theme.spacing(0.5),
+        whiteSpace: "nowrap",
+      },
+    },
+    actionCell: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      width: 108,
+      minWidth: 108,
+      maxWidth: 108,
+    },
+    actionButton: {
+      width: 32,
+      height: 32,
+      padding: theme.spacing(0.5),
+      marginLeft: theme.spacing(0.75),
+      "&:first-child": {
+        marginLeft: 0,
+      },
+    },
     deleteButton: { color: theme.palette.error.main },
   };
 }
@@ -107,7 +134,7 @@ function GrievanceCategoriesSearcher({
   };
 
   const itemFormatters = () => {
-    const formatters = [
+    return [
       (category) => category.name,
       (category) => category.timeline,
       (category) =>
@@ -115,58 +142,54 @@ function GrievanceCategoriesSearcher({
           ? formatMessage(intl, MODULE_NAME, "status.active")
           : formatMessage(intl, MODULE_NAME, "status.inactive"),
       (category) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.viewTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketCategory",
-                [category.id],
-                false,
-              )
-            }
-          >
-            <VisibilityIcon />
-          </IconButton>
-        </Tooltip>
+        <div className={classes.actionCell}>
+          <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.viewTooltip")}>
+            <IconButton
+              className={classes.actionButton}
+              onClick={() =>
+                historyPush(
+                  modulesManager,
+                  history,
+                  "grievanceSocialProtection.route.ticketCategory",
+                  [category.id],
+                  false,
+                )
+              }
+            >
+              <VisibilityIcon />
+            </IconButton>
+          </Tooltip>
+          {rights.includes(RIGHT_TICKET_EDIT) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.editTooltip")}>
+              <IconButton
+                className={classes.actionButton}
+                onClick={() =>
+                  historyPush(
+                    modulesManager,
+                    history,
+                    "grievanceSocialProtection.route.ticketCategoryEdit",
+                    [category.id],
+                    false,
+                  )
+                }
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {rights.includes(RIGHT_TICKET_DELETE) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteTooltip")}>
+              <IconButton
+                className={`${classes.actionButton} ${classes.deleteButton}`}
+                onClick={() => setDeleteDialog({ open: true, item: category })}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </div>
       ),
     ];
-
-    if (rights.includes(RIGHT_TICKET_EDIT)) {
-      formatters.push((category) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.editTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketCategoryEdit",
-                [category.id],
-                false,
-              )
-            }
-          >
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    if (rights.includes(RIGHT_TICKET_DELETE)) {
-      formatters.push((category) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteTooltip")}>
-          <IconButton
-            className={classes.deleteButton}
-            onClick={() => setDeleteDialog({ open: true, item: category })}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    return formatters;
   };
 
   const headers = () => [
@@ -174,48 +197,48 @@ function GrievanceCategoriesSearcher({
     "grievanceCategory.timeline",
     "grievanceCategory.status",
     "",
-    ...(rights.includes(RIGHT_TICKET_EDIT) ? [""] : []),
-    ...(rights.includes(RIGHT_TICKET_DELETE) ? [""] : []),
   ];
 
   return (
     <>
-      <Searcher
-        module={MODULE_NAME}
-        cacheFiltersKey={cacheFiltersKey}
-        FilterPane={({ filters, onChangeFilters }) => (
-          <GrievanceCategoryFilter filters={filters} onChangeFilters={onChangeFilters} />
-        )}
-        filterPaneContributionsKey={filterPaneContributionsKey}
-        items={categories}
-        itemsPageInfo={categoriesPageInfo}
-        fetchingItems={fetchingCategories}
-        fetchedItems={fetchedCategories}
-        errorItems={errorCategories}
-        tableTitle={formatMessage(intl, MODULE_NAME, "grievanceCategory.listTitle")}
-        rowsPerPageOptions={rowsPerPageOptions}
-        defaultPageSize={defaultPageSize}
-        fetch={fetch}
-        rowIdentifier={(r) => r.id}
-        filtersToQueryParams={filtersToQueryParams}
-        defaultOrderBy="name"
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={() => [
-          ["name", true],
-          ["timeline", true],
-        ]}
-        onDoubleClick={(category) =>
-          historyPush(
-            modulesManager,
-            history,
-            "grievanceSocialProtection.route.ticketCategory",
-            [category.id],
-            false,
-          )
-        }
-        reset={reset}
-      />
+      <div className={classes.searcher}>
+        <Searcher
+          module={MODULE_NAME}
+          cacheFiltersKey={cacheFiltersKey}
+          FilterPane={({ filters, onChangeFilters }) => (
+            <GrievanceCategoryFilter filters={filters} onChangeFilters={onChangeFilters} />
+          )}
+          filterPaneContributionsKey={filterPaneContributionsKey}
+          items={categories}
+          itemsPageInfo={categoriesPageInfo}
+          fetchingItems={fetchingCategories}
+          fetchedItems={fetchedCategories}
+          errorItems={errorCategories}
+          tableTitle={formatMessage(intl, MODULE_NAME, "grievanceCategory.listTitle")}
+          rowsPerPageOptions={rowsPerPageOptions}
+          defaultPageSize={defaultPageSize}
+          fetch={fetch}
+          rowIdentifier={(r) => r.id}
+          filtersToQueryParams={filtersToQueryParams}
+          defaultOrderBy="name"
+          headers={headers}
+          itemFormatters={itemFormatters}
+          sorts={() => [
+            ["name", true],
+            ["timeline", true],
+          ]}
+          onDoubleClick={(category) =>
+            historyPush(
+              modulesManager,
+              history,
+              "grievanceSocialProtection.route.ticketCategory",
+              [category.id],
+              false,
+            )
+          }
+          reset={reset}
+        />
+      </div>
 
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, item: null })}>
         <DialogTitle>
@@ -224,12 +247,9 @@ function GrievanceCategoriesSearcher({
         <DialogContent>
           <DialogContentText>
             {deleteDialog.item &&
-              formatMessageWithValues(
-                intl,
-                MODULE_NAME,
-                "grievanceCategory.deleteConfirmMessage",
-                { name: deleteDialog.item.name },
-              )}
+              formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.deleteConfirmMessage", {
+                name: deleteDialog.item.name,
+              })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -258,6 +278,8 @@ const mapStateToProps = (state) => ({
 
 export default withModulesManager(
   withHistory(
-    injectIntl(withTheme(withStyles(styles)(connect(mapStateToProps)(GrievanceCategoriesSearcher)))),
+    injectIntl(
+      withTheme(withStyles(styles)(connect(mapStateToProps)(GrievanceCategoriesSearcher))),
+    ),
   ),
 );

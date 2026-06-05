@@ -32,6 +32,33 @@ function styles(theme) {
   return {
     paper: { ...theme.paper.paper, margin: 0 },
     paperHeader: { ...theme.paper.header, padding: 10 },
+    searcher: {
+      "& table thead tr th:last-child, & table tbody tr td:last-child": {
+        width: 116,
+        minWidth: 116,
+        maxWidth: 116,
+        paddingLeft: theme.spacing(0.5),
+        paddingRight: theme.spacing(0.5),
+        whiteSpace: "nowrap",
+      },
+    },
+    actionCell: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      width: 108,
+      minWidth: 108,
+      maxWidth: 108,
+    },
+    actionButton: {
+      width: 32,
+      height: 32,
+      padding: theme.spacing(0.5),
+      marginLeft: theme.spacing(0.75),
+      "&:first-child": {
+        marginLeft: 0,
+      },
+    },
     deleteButton: { color: theme.palette.error.main },
   };
 }
@@ -107,112 +134,102 @@ function GrievanceChannelsSearcher({
   };
 
   const itemFormatters = () => {
-    const formatters = [
+    return [
       (channel) => channel.name,
       (channel) =>
         channel.isActive
           ? formatMessage(intl, MODULE_NAME, "status.active")
           : formatMessage(intl, MODULE_NAME, "status.inactive"),
       (channel) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.viewTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketChannel",
-                [channel.id],
-                false,
-              )
-            }
-          >
-            <VisibilityIcon />
-          </IconButton>
-        </Tooltip>
+        <div className={classes.actionCell}>
+          <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.viewTooltip")}>
+            <IconButton
+              className={classes.actionButton}
+              onClick={() =>
+                historyPush(
+                  modulesManager,
+                  history,
+                  "grievanceSocialProtection.route.ticketChannel",
+                  [channel.id],
+                  false,
+                )
+              }
+            >
+              <VisibilityIcon />
+            </IconButton>
+          </Tooltip>
+          {rights.includes(RIGHT_TICKET_EDIT) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.editTooltip")}>
+              <IconButton
+                className={classes.actionButton}
+                onClick={() =>
+                  historyPush(
+                    modulesManager,
+                    history,
+                    "grievanceSocialProtection.route.ticketChannelEdit",
+                    [channel.id],
+                    false,
+                  )
+                }
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {rights.includes(RIGHT_TICKET_DELETE) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.deleteTooltip")}>
+              <IconButton
+                className={`${classes.actionButton} ${classes.deleteButton}`}
+                onClick={() => setDeleteDialog({ open: true, item: channel })}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </div>
       ),
     ];
-
-    if (rights.includes(RIGHT_TICKET_EDIT)) {
-      formatters.push((channel) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.editTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketChannelEdit",
-                [channel.id],
-                false,
-              )
-            }
-          >
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    if (rights.includes(RIGHT_TICKET_DELETE)) {
-      formatters.push((channel) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.deleteTooltip")}>
-          <IconButton
-            className={classes.deleteButton}
-            onClick={() => setDeleteDialog({ open: true, item: channel })}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    return formatters;
   };
 
-  const headers = () => [
-    "grievanceChannel.name",
-    "grievanceChannel.status",
-    "",
-    ...(rights.includes(RIGHT_TICKET_EDIT) ? [""] : []),
-    ...(rights.includes(RIGHT_TICKET_DELETE) ? [""] : []),
-  ];
+  const headers = () => ["grievanceChannel.name", "grievanceChannel.status", ""];
 
   return (
     <>
-      <Searcher
-        module={MODULE_NAME}
-        cacheFiltersKey={cacheFiltersKey}
-        FilterPane={({ filters, onChangeFilters }) => (
-          <GrievanceChannelFilter filters={filters} onChangeFilters={onChangeFilters} />
-        )}
-        filterPaneContributionsKey={filterPaneContributionsKey}
-        items={channels}
-        itemsPageInfo={channelsPageInfo}
-        fetchingItems={fetchingChannels}
-        fetchedItems={fetchedChannels}
-        errorItems={errorChannels}
-        tableTitle={formatMessage(intl, MODULE_NAME, "grievanceChannel.listTitle")}
-        rowsPerPageOptions={rowsPerPageOptions}
-        defaultPageSize={defaultPageSize}
-        fetch={fetch}
-        rowIdentifier={(r) => r.id}
-        filtersToQueryParams={filtersToQueryParams}
-        defaultOrderBy="name"
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={() => [
-          ["name", true],
-        ]}
-        onDoubleClick={(channel) =>
-          historyPush(
-            modulesManager,
-            history,
-            "grievanceSocialProtection.route.ticketChannel",
-            [channel.id],
-            false,
-          )
-        }
-        reset={reset}
-      />
+      <div className={classes.searcher}>
+        <Searcher
+          module={MODULE_NAME}
+          cacheFiltersKey={cacheFiltersKey}
+          FilterPane={({ filters, onChangeFilters }) => (
+            <GrievanceChannelFilter filters={filters} onChangeFilters={onChangeFilters} />
+          )}
+          filterPaneContributionsKey={filterPaneContributionsKey}
+          items={channels}
+          itemsPageInfo={channelsPageInfo}
+          fetchingItems={fetchingChannels}
+          fetchedItems={fetchedChannels}
+          errorItems={errorChannels}
+          tableTitle={formatMessage(intl, MODULE_NAME, "grievanceChannel.listTitle")}
+          rowsPerPageOptions={rowsPerPageOptions}
+          defaultPageSize={defaultPageSize}
+          fetch={fetch}
+          rowIdentifier={(r) => r.id}
+          filtersToQueryParams={filtersToQueryParams}
+          defaultOrderBy="name"
+          headers={headers}
+          itemFormatters={itemFormatters}
+          sorts={() => [["name", true]]}
+          onDoubleClick={(channel) =>
+            historyPush(
+              modulesManager,
+              history,
+              "grievanceSocialProtection.route.ticketChannel",
+              [channel.id],
+              false,
+            )
+          }
+          reset={reset}
+        />
+      </div>
 
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, item: null })}>
         <DialogTitle>

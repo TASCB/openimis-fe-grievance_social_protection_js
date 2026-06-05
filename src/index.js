@@ -2,7 +2,7 @@
 /* eslint-disable camelcase */
 /* eslint-disable import/prefer-default-export */
 import React from "react";
-import { ListAlt, AddCircleOutline } from "@material-ui/icons";
+import { Add, ListAlt } from "@material-ui/icons";
 import { FormattedMessage } from "@openimis/fe-core";
 import messages_en from "./translations/en.json";
 import reducer from "./reducer";
@@ -208,7 +208,7 @@ const DEFAULT_CONFIG = {
   "grievance.MainMenu": [
     {
       text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.add" />,
-      icon: <AddCircleOutline />,
+      icon: <Add />,
       route: `/${ROUTE_TICKET_NEW_TICKET}`,
       filter: (rights) => rights.includes(RIGHT_TICKET_ADD),
       id: "grievance.add",

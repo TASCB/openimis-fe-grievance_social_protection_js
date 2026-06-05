@@ -13,12 +13,16 @@ import {
   TableRow,
   Typography,
 } from "@material-ui/core";
+import DescriptionIcon from "@material-ui/icons/Description";
+import PictureAsPdfIcon from "@material-ui/icons/PictureAsPdf";
 import SearchIcon from "@material-ui/icons/Search";
+import TableChartIcon from "@material-ui/icons/TableChart";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { ProgressOrError, decodeId, formatMessage, withModulesManager } from "@openimis/fe-core";
-import { GRIEVANCE_REPORT_TYPES, MODULE_NAME } from "../constants";
+import { GRIEVANCE_REPORT_OPTIONS, GRIEVANCE_REPORT_TYPES, MODULE_NAME } from "../constants";
 import { fetchGrievanceReports } from "../actions";
 import TicketReportFilter from "./TicketReportFilter";
+import { EXPORT_FORMATS, exportReport } from "../utils/reportExport";
 
 function styles(theme) {
   return {
@@ -28,6 +32,10 @@ function styles(theme) {
     table: {
       tableLayout: "fixed",
     },
+    reportCell: {
+      paddingTop: theme.spacing(1.5),
+      paddingBottom: theme.spacing(1.5),
+    },
     emptyRow: {
       textAlign: "center",
       padding: theme.spacing(3),
@@ -36,6 +44,13 @@ function styles(theme) {
       display: "flex",
       justifyContent: "flex-end",
       alignItems: "center",
+      flexWrap: "wrap",
+      paddingTop: theme.spacing(0.5),
+    },
+    exportButton: {
+      marginLeft: theme.spacing(1),
+      marginTop: theme.spacing(0.5),
+      marginBottom: theme.spacing(0.5),
     },
   };
 }
@@ -102,6 +117,11 @@ function formatNumber(value) {
 
 function normalizeReport(value) {
   return value?.value || value || GRIEVANCE_REPORT_TYPES.CATEGORY;
+}
+
+function reportLabel(report, intl) {
+  const reportOption = GRIEVANCE_REPORT_OPTIONS.find((option) => option.value === report);
+  return reportOption ? formatMessage(intl, MODULE_NAME, reportOption.label) : report;
 }
 
 function reportColumns(report, intl) {
@@ -220,17 +240,26 @@ function TicketReportSearcher({
     fetchReports();
   }, [fetchReports]);
 
-  const columns = reportColumns(selectedReport, intl);
+  const columns = useMemo(() => reportColumns(selectedReport, intl), [intl, selectedReport]);
+  const reportTitle = useMemo(
+    () =>
+      `${formatMessage(intl, MODULE_NAME, "grievanceReport.title")} - ${reportLabel(
+        selectedReport,
+        intl,
+      )}`,
+    [intl, selectedReport],
+  );
+  const exportDisabled = fetchingReports || reports.length === 0;
 
   return (
     <Paper className={classes.paper}>
       <Grid container className={classes.paperHeader}>
-        <Grid item xs={12} sm={8}>
+        <Grid item xs={12} md={4}>
           <Typography variant="h6">
             {formatMessage(intl, MODULE_NAME, "grievanceReport.title")}
           </Typography>
         </Grid>
-        <Grid item xs={12} sm={4} className={classes.actions}>
+        <Grid item xs={12} md={8} className={classes.actions}>
           <Button
             color="primary"
             variant="contained"
@@ -239,6 +268,42 @@ function TicketReportSearcher({
             disabled={fetchingReports}
           >
             {formatMessage(intl, MODULE_NAME, "grievanceReport.run")}
+          </Button>
+          <Button
+            className={classes.exportButton}
+            color="primary"
+            variant="outlined"
+            startIcon={<DescriptionIcon />}
+            onClick={() =>
+              exportReport(EXPORT_FORMATS.CSV, reportTitle, selectedReport, columns, reports)
+            }
+            disabled={exportDisabled}
+          >
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportCsv")}
+          </Button>
+          <Button
+            className={classes.exportButton}
+            color="primary"
+            variant="outlined"
+            startIcon={<TableChartIcon />}
+            onClick={() =>
+              exportReport(EXPORT_FORMATS.EXCEL, reportTitle, selectedReport, columns, reports)
+            }
+            disabled={exportDisabled}
+          >
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportExcel")}
+          </Button>
+          <Button
+            className={classes.exportButton}
+            color="primary"
+            variant="outlined"
+            startIcon={<PictureAsPdfIcon />}
+            onClick={() =>
+              exportReport(EXPORT_FORMATS.PDF, reportTitle, selectedReport, columns, reports)
+            }
+            disabled={exportDisabled}
+          >
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportPdf")}
           </Button>
         </Grid>
       </Grid>
@@ -253,14 +318,19 @@ function TicketReportSearcher({
         <TableHead>
           <TableRow>
             {columns.map((column) => (
-              <TableCell key={column.label}>{column.label}</TableCell>
+              <TableCell key={column.label} className={classes.reportCell}>
+                {column.label}
+              </TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
           {reports.length === 0 && !fetchingReports ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className={classes.emptyRow}>
+              <TableCell
+                colSpan={columns.length}
+                className={`${classes.reportCell} ${classes.emptyRow}`}
+              >
                 {formatMessage(intl, MODULE_NAME, "grievanceReport.noResults")}
               </TableCell>
             </TableRow>
@@ -268,7 +338,9 @@ function TicketReportSearcher({
             reports.map((row, rowIndex) => (
               <TableRow key={`${row.report}-${row.ticketId || row.label || rowIndex}`}>
                 {columns.map((column) => (
-                  <TableCell key={column.label}>{column.render(row)}</TableCell>
+                  <TableCell key={column.label} className={classes.reportCell}>
+                    {column.render(row)}
+                  </TableCell>
                 ))}
               </TableRow>
             ))

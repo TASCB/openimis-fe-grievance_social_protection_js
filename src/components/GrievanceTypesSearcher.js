@@ -32,6 +32,33 @@ function styles(theme) {
   return {
     paper: { ...theme.paper.paper, margin: 0 },
     paperHeader: { ...theme.paper.header, padding: 10 },
+    searcher: {
+      "& table thead tr th:last-child, & table tbody tr td:last-child": {
+        width: 116,
+        minWidth: 116,
+        maxWidth: 116,
+        paddingLeft: theme.spacing(0.5),
+        paddingRight: theme.spacing(0.5),
+        whiteSpace: "nowrap",
+      },
+    },
+    actionCell: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      width: 108,
+      minWidth: 108,
+      maxWidth: 108,
+    },
+    actionButton: {
+      width: 32,
+      height: 32,
+      padding: theme.spacing(0.5),
+      marginLeft: theme.spacing(0.75),
+      "&:first-child": {
+        marginLeft: 0,
+      },
+    },
     deleteButton: { color: theme.palette.error.main },
   };
 }
@@ -108,7 +135,7 @@ function GrievanceTypesSearcher({
   };
 
   const itemFormatters = () => {
-    const formatters = [
+    return [
       (type) => type.name,
       (type) => type.categoryName || type.category?.name || "",
       (type) =>
@@ -116,58 +143,54 @@ function GrievanceTypesSearcher({
           ? formatMessage(intl, MODULE_NAME, "status.active")
           : formatMessage(intl, MODULE_NAME, "status.inactive"),
       (type) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.viewTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketType",
-                [type.id],
-                false,
-              )
-            }
-          >
-            <VisibilityIcon />
-          </IconButton>
-        </Tooltip>
+        <div className={classes.actionCell}>
+          <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.viewTooltip")}>
+            <IconButton
+              className={classes.actionButton}
+              onClick={() =>
+                historyPush(
+                  modulesManager,
+                  history,
+                  "grievanceSocialProtection.route.ticketType",
+                  [type.id],
+                  false,
+                )
+              }
+            >
+              <VisibilityIcon />
+            </IconButton>
+          </Tooltip>
+          {rights.includes(RIGHT_TICKET_EDIT) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.editTooltip")}>
+              <IconButton
+                className={classes.actionButton}
+                onClick={() =>
+                  historyPush(
+                    modulesManager,
+                    history,
+                    "grievanceSocialProtection.route.ticketTypeEdit",
+                    [type.id],
+                    false,
+                  )
+                }
+              >
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {rights.includes(RIGHT_TICKET_DELETE) && (
+            <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.deleteTooltip")}>
+              <IconButton
+                className={`${classes.actionButton} ${classes.deleteButton}`}
+                onClick={() => setDeleteDialog({ open: true, item: type })}
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </div>
       ),
     ];
-
-    if (rights.includes(RIGHT_TICKET_EDIT)) {
-      formatters.push((type) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.editTooltip")}>
-          <IconButton
-            onClick={() =>
-              historyPush(
-                modulesManager,
-                history,
-                "grievanceSocialProtection.route.ticketTypeEdit",
-                [type.id],
-                false,
-              )
-            }
-          >
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    if (rights.includes(RIGHT_TICKET_DELETE)) {
-      formatters.push((type) => (
-        <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.deleteTooltip")}>
-          <IconButton
-            className={classes.deleteButton}
-            onClick={() => setDeleteDialog({ open: true, item: type })}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      ));
-    }
-
-    return formatters;
   };
 
   const headers = () => [
@@ -175,48 +198,48 @@ function GrievanceTypesSearcher({
     "grievanceType.category",
     "grievanceType.status",
     "",
-    ...(rights.includes(RIGHT_TICKET_EDIT) ? [""] : []),
-    ...(rights.includes(RIGHT_TICKET_DELETE) ? [""] : []),
   ];
 
   return (
     <>
-      <Searcher
-        module={MODULE_NAME}
-        cacheFiltersKey={cacheFiltersKey}
-        FilterPane={({ filters, onChangeFilters }) => (
-          <GrievanceTypeFilter filters={filters} onChangeFilters={onChangeFilters} />
-        )}
-        filterPaneContributionsKey={filterPaneContributionsKey}
-        items={types}
-        itemsPageInfo={typesPageInfo}
-        fetchingItems={fetchingTypes}
-        fetchedItems={fetchedTypes}
-        errorItems={errorTypes}
-        tableTitle={formatMessage(intl, MODULE_NAME, "grievanceType.listTitle")}
-        rowsPerPageOptions={rowsPerPageOptions}
-        defaultPageSize={defaultPageSize}
-        fetch={fetch}
-        rowIdentifier={(r) => r.id}
-        filtersToQueryParams={filtersToQueryParams}
-        defaultOrderBy="name"
-        headers={headers}
-        itemFormatters={itemFormatters}
-        sorts={() => [
-          ["name", true],
-          ["category__name", true],
-        ]}
-        onDoubleClick={(type) =>
-          historyPush(
-            modulesManager,
-            history,
-            "grievanceSocialProtection.route.ticketType",
-            [type.id],
-            false,
-          )
-        }
-        reset={reset}
-      />
+      <div className={classes.searcher}>
+        <Searcher
+          module={MODULE_NAME}
+          cacheFiltersKey={cacheFiltersKey}
+          FilterPane={({ filters, onChangeFilters }) => (
+            <GrievanceTypeFilter filters={filters} onChangeFilters={onChangeFilters} />
+          )}
+          filterPaneContributionsKey={filterPaneContributionsKey}
+          items={types}
+          itemsPageInfo={typesPageInfo}
+          fetchingItems={fetchingTypes}
+          fetchedItems={fetchedTypes}
+          errorItems={errorTypes}
+          tableTitle={formatMessage(intl, MODULE_NAME, "grievanceType.listTitle")}
+          rowsPerPageOptions={rowsPerPageOptions}
+          defaultPageSize={defaultPageSize}
+          fetch={fetch}
+          rowIdentifier={(r) => r.id}
+          filtersToQueryParams={filtersToQueryParams}
+          defaultOrderBy="name"
+          headers={headers}
+          itemFormatters={itemFormatters}
+          sorts={() => [
+            ["name", true],
+            ["category__name", true],
+          ]}
+          onDoubleClick={(type) =>
+            historyPush(
+              modulesManager,
+              history,
+              "grievanceSocialProtection.route.ticketType",
+              [type.id],
+              false,
+            )
+          }
+          reset={reset}
+        />
+      </div>
 
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, item: null })}>
         <DialogTitle>
