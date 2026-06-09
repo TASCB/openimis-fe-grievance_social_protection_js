@@ -1,10 +1,5 @@
-const PDF_PAGE_WIDTH = 842;
-const PDF_PAGE_HEIGHT = 595;
-const PDF_MARGIN = 32;
-const PDF_CELL_PADDING = 4;
-const PDF_FONT_SIZE = 7;
-const PDF_HEADER_FONT_SIZE = 7;
-const PDF_LINE_HEIGHT = 10;
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const EXPORT_FORMATS = {
   CSV: "csv",
@@ -93,245 +88,365 @@ function buildExcelHtml(title, columns, rows) {
 </html>`;
 }
 
-function pdfNumber(value) {
-  const rounded = Number(value)
-    .toFixed(2)
-    .replace(/\.?0+$/, "");
-  return rounded === "-0" || rounded === "" ? "0" : rounded;
-}
+function createProtectedPdf(options = {}) {
+  const baseOptions = {
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    ...options,
+  };
 
-function padLeft(value, length) {
-  let padded = String(value);
-  while (padded.length < length) {
-    padded = `0${padded}`;
-  }
-  return padded;
-}
-
-function pdfHexString(value) {
-  let hex = "FEFF";
-  stringifyExportValue(value)
-    .split("")
-    .forEach((character) => {
-      hex = `${hex}${padLeft(character.charCodeAt(0).toString(16).toUpperCase(), 4)}`;
+  try {
+    return new jsPDF({
+      ...baseOptions,
+      encryption: {
+        userPassword: "",
+        ownerPassword: `tasafmis-${Date.now()}`,
+        userPermissions: ["print"],
+      },
     });
-  return `<${hex}>`;
-}
-
-function drawText(x, y, text, fontSize = PDF_FONT_SIZE, font = "F1") {
-  return `BT /${font} ${pdfNumber(fontSize)} Tf ${pdfNumber(x)} ${pdfNumber(
-    PDF_PAGE_HEIGHT - y - fontSize,
-  )} Td ${pdfHexString(text)} Tj ET`;
-}
-
-function drawRect(x, y, width, height) {
-  return `${pdfNumber(x)} ${pdfNumber(PDF_PAGE_HEIGHT - y - height)} ${pdfNumber(
-    width,
-  )} ${pdfNumber(height)} re S`;
-}
-
-function fillRect(x, y, width, height, shade = 0.93) {
-  return `${pdfNumber(shade)} ${pdfNumber(shade)} ${pdfNumber(shade)} rg ${pdfNumber(
-    x,
-  )} ${pdfNumber(PDF_PAGE_HEIGHT - y - height)} ${pdfNumber(width)} ${pdfNumber(
-    height,
-  )} re f 0 0 0 rg`;
-}
-
-function splitLongWord(word, limit) {
-  const chunks = [];
-  let remaining = word;
-  while (remaining.length > limit) {
-    chunks.push(remaining.slice(0, limit));
-    remaining = remaining.slice(limit);
+  } catch (e) {
+    return new jsPDF(baseOptions);
   }
-  if (remaining) chunks.push(remaining);
-  return chunks;
 }
 
-function wrapPdfText(value, width, fontSize, maxLines = 8) {
-  const text = stringifyExportValue(value);
-  if (!text) return [""];
+function getImageFormat(mimeType) {
+  const normalized = (mimeType || "").toLowerCase();
+  if (normalized.includes("png")) return "PNG";
+  if (normalized.includes("jpeg") || normalized.includes("jpg")) return "JPEG";
+  if (normalized.includes("webp")) return "WEBP";
+  return null;
+}
 
-  const charsPerLine = Math.max(Math.floor(width / (fontSize * 0.52)), 6);
-  const lines = [];
-  let currentLine = "";
+async function blobToDataUrl(blob, mimeType) {
+  if (typeof FileReader !== "undefined") {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-  text.split(" ").forEach((word) => {
-    const chunks = word.length > charsPerLine ? splitLongWord(word, charsPerLine) : [word];
-    chunks.forEach((chunk) => {
-      const candidate = currentLine ? `${currentLine} ${chunk}` : chunk;
-      if (candidate.length <= charsPerLine) {
-        currentLine = candidate;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = chunk;
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  const bufferConstructor = globalThis.Buffer;
+  if (bufferConstructor && typeof blob.arrayBuffer === "function") {
+    const arrayBuffer = await blob.arrayBuffer();
+    return `data:${mimeType};base64,${bufferConstructor.from(arrayBuffer).toString("base64")}`;
+  }
+
+  return null;
+}
+
+async function loadImageAsset(paths) {
+  for (const path of paths) {
+    try {
+      const response = await fetch(path);
+
+      if (response.ok) {
+        const mimeType = response.headers.get("content-type") || "";
+        const format = getImageFormat(mimeType);
+
+        if (!format) continue;
+
+        const blob = await response.blob();
+        const data = await blobToDataUrl(blob, mimeType);
+
+        if (data) return { data, format };
       }
-    });
-  });
-
-  if (currentLine) lines.push(currentLine);
-  if (lines.length <= maxLines) return lines;
-
-  const truncatedLines = lines.slice(0, maxLines);
-  truncatedLines[maxLines - 1] = `${truncatedLines[maxLines - 1].slice(
-    0,
-    Math.max(charsPerLine - 3, 0),
-  )}...`;
-  return truncatedLines;
-}
-
-function columnWidthsForPdf(columns, rows) {
-  const availableWidth = PDF_PAGE_WIDTH - PDF_MARGIN * 2;
-  const weights = columns.map((column, columnIndex) => {
-    const sampleLength = rows.slice(0, 25).reduce((maxLength, row) => {
-      return Math.max(maxLength, stringifyExportValue(row[columnIndex]).length);
-    }, stringifyExportValue(column.label).length);
-    return Math.min(Math.max(sampleLength, 6), 28);
-  });
-  const totalWeight = weights.reduce((total, weight) => total + weight, 0) || columns.length || 1;
-  return weights.map((weight) => (availableWidth * weight) / totalWeight);
-}
-
-function drawPdfRow(commands, y, columnWidths, wrappedCells, rowHeight, options = {}) {
-  const fontSize = options.fontSize || PDF_FONT_SIZE;
-  const font = options.font || "F1";
-  let x = PDF_MARGIN;
-
-  if (options.fill) {
-    commands.push(fillRect(PDF_MARGIN, y, PDF_PAGE_WIDTH - PDF_MARGIN * 2, rowHeight));
+    } catch (e) {
+      // Missing branding assets should not block report export.
+    }
   }
 
-  wrappedCells.forEach((lines, columnIndex) => {
-    commands.push(drawRect(x, y, columnWidths[columnIndex], rowHeight));
-    lines.forEach((line, lineIndex) => {
-      commands.push(
-        drawText(
-          x + PDF_CELL_PADDING,
-          y + PDF_CELL_PADDING + lineIndex * PDF_LINE_HEIGHT,
-          line,
-          fontSize,
-          font,
-        ),
-      );
-    });
-    x += columnWidths[columnIndex];
-  });
+  return null;
 }
 
-function buildPdfPages(title, columns, rows) {
-  const columnWidths = columnWidthsForPdf(columns, rows);
-  const pages = [];
-  let commands = [];
-  let y = PDF_MARGIN;
+async function loadLogo() {
+  return loadImageAsset(["/front/tasafMIS.png", "/tasafMIS.png"]);
+}
 
-  const buildHeader = () => {
-    y = PDF_MARGIN;
-    commands.push(drawText(PDF_MARGIN, y, title, 14, "F2"));
-    y += 22;
-    commands.push(drawText(PDF_MARGIN, y, new Date().toLocaleString(), 8));
-    y += 20;
+async function loadGovernmentLogo() {
+  return loadImageAsset(["/front/bibiNabwana.png", "/bibiNabwana.png"]);
+}
 
-    const wrappedHeaders = columns.map((column, columnIndex) =>
-      wrapPdfText(
-        column.label,
-        columnWidths[columnIndex] - PDF_CELL_PADDING * 2,
-        PDF_HEADER_FONT_SIZE,
-        3,
-      ),
-    );
-    const headerHeight =
-      Math.max(...wrappedHeaders.map((lines) => lines.length)) * PDF_LINE_HEIGHT +
-      PDF_CELL_PADDING * 2;
-    drawPdfRow(commands, y, columnWidths, wrappedHeaders, headerHeight, {
-      fill: true,
-      font: "F2",
-      fontSize: PDF_HEADER_FONT_SIZE,
-    });
-    y += headerHeight;
-  };
+function fitTextToWidth(doc, value, width) {
+  const lines = doc.splitTextToSize(String(value || "-"), width);
+  if (!lines.length) return "-";
+  if (lines.length === 1) return lines[0];
+  const firstLine = lines[0];
+  return firstLine.length > 3 ? `${firstLine.slice(0, firstLine.length - 3)}...` : firstLine;
+}
 
-  const startPage = () => {
-    if (commands.length) pages.push(commands.join("\n"));
-    commands = [];
-    buildHeader();
-  };
+function drawHeader({ doc, pageWidth, margin, rightLogo, leftLogo, title }) {
+  const headerHeight = 40;
+  const centerX = pageWidth / 2;
 
-  startPage();
+  doc.setFillColor(0, 102, 102);
+  doc.rect(0, 0, pageWidth, headerHeight, "F");
 
-  rows.forEach((row) => {
-    const wrappedCells = row.map((cell, columnIndex) =>
-      wrapPdfText(cell, columnWidths[columnIndex] - PDF_CELL_PADDING * 2, PDF_FONT_SIZE),
-    );
-    const rowHeight =
-      Math.max(...wrappedCells.map((lines) => lines.length)) * PDF_LINE_HEIGHT +
-      PDF_CELL_PADDING * 2;
-
-    if (y + rowHeight > PDF_PAGE_HEIGHT - PDF_MARGIN) {
-      startPage();
+  if (leftLogo) {
+    try {
+      doc.addImage(leftLogo.data, leftLogo.format, margin, 8, 24, 24);
+    } catch (error) {
+      console.warn("Failed to add government logo to PDF header:", error);
     }
+  }
 
-    drawPdfRow(commands, y, columnWidths, wrappedCells, rowHeight);
-    y += rowHeight;
-  });
+  if (rightLogo) {
+    try {
+      doc.addImage(rightLogo.data, rightLogo.format, pageWidth - margin - 33, 6, 33, 28);
+    } catch (error) {
+      console.warn("Failed to add TASAF logo to PDF header:", error);
+    }
+  }
 
-  if (commands.length) pages.push(commands.join("\n"));
-  return pages;
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(15);
+  doc.setFont(undefined, "bold");
+  doc.text("MFUKO WA MAENDELEO YA JAMII (TASAF III)", centerX, 12, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.text("MPANGO WA KUNUSURU KAYA MASIKINI", centerX, 18, { align: "center" });
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  const titleLines = doc
+    .splitTextToSize(String(title || "").toUpperCase(), pageWidth - 100)
+    .slice(0, 2);
+  doc.text(titleLines, centerX, 24, { align: "center" });
+
+  doc.setTextColor(0, 0, 0);
 }
 
-function buildPdfDocument(pages) {
-  const fontObjectNumber = 3 + pages.length * 2;
-  const boldFontObjectNumber = fontObjectNumber + 1;
-  const pageObjectNumbers = pages.map((_, index) => 3 + index * 2);
-  const objects = [
-    { number: 1, body: "<< /Type /Catalog /Pages 2 0 R >>" },
+function addWatermark(doc, logo, pageWidth, pageHeight) {
+  if (!logo) return;
+
+  const logoWidth = 150;
+  const logoHeight = 130;
+  const x = (pageWidth - logoWidth) / 2;
+  const y = (pageHeight - logoHeight) / 2;
+
+  try {
+    doc.setGState(new doc.GState({ opacity: 0.07 }));
+    doc.addImage(logo.data, logo.format, x, y, logoWidth, logoHeight);
+    doc.setGState(new doc.GState({ opacity: 1 }));
+  } catch (error) {
+    console.warn("Failed to add TASAF watermark to PDF:", error);
+  }
+}
+
+function addFooter(doc, pageWidth, pageHeight) {
+  const pageNumber = doc.getCurrentPageInfo().pageNumber;
+  const totalPages = doc.getNumberOfPages();
+
+  doc.setDrawColor(0, 102, 102);
+  doc.line(12, pageHeight - 10, pageWidth - 12, pageHeight - 10);
+
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - 12, pageHeight - 5, {
+    align: "right",
+  });
+}
+
+function drawMetadataBoxes({
+  doc,
+  margin,
+  pageWidth,
+  startY,
+  generatedDate,
+  reportName,
+  totalRecords,
+}) {
+  const contentWidth = pageWidth - margin * 2;
+  const gap = 3;
+  const boxHeight = 14;
+  const boxWidth = (contentWidth - gap * 2) / 3;
+  const metadataItems = [
     {
-      number: 2,
-      body: `<< /Type /Pages /Kids [${pageObjectNumbers
-        .map((number) => `${number} 0 R`)
-        .join(" ")}] /Count ${pages.length} >>`,
+      label: "Date:",
+      value: generatedDate?.toLocaleString() || "-",
+    },
+    {
+      label: "Report:",
+      value: reportName || "-",
+    },
+    {
+      label: "Records:",
+      value: totalRecords,
     },
   ];
 
-  pages.forEach((content, index) => {
-    const pageObjectNumber = 3 + index * 2;
-    const contentObjectNumber = pageObjectNumber + 1;
-    objects.push({
-      number: pageObjectNumber,
-      body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_PAGE_WIDTH} ${PDF_PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontObjectNumber} 0 R /F2 ${boldFontObjectNumber} 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`,
-    });
-    objects.push({
-      number: contentObjectNumber,
-      body: `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
-    });
+  let x = margin;
+
+  metadataItems.forEach((item) => {
+    doc.setFillColor(240, 248, 248);
+    doc.rect(x, startY, boxWidth, boxHeight, "F");
+
+    doc.setDrawColor(0, 102, 102);
+    doc.rect(x, startY, boxWidth, boxHeight);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(8);
+    doc.setFont(undefined, "bold");
+    doc.text(item.label, x + 2, startY + 5);
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    doc.text(fitTextToWidth(doc, item.value, boxWidth - 4), x + 2, startY + 11);
+
+    x += boxWidth + gap;
   });
 
-  objects.push({
-    number: fontObjectNumber,
-    body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-  });
-  objects.push({
-    number: boldFontObjectNumber,
-    body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
-  });
-
-  let pdf = "%PDF-1.4\n";
-  const offsets = {};
-  objects.forEach((object) => {
-    offsets[object.number] = pdf.length;
-    pdf = `${pdf}${object.number} 0 obj\n${object.body}\nendobj\n`;
-  });
-
-  const xrefOffset = pdf.length;
-  pdf = `${pdf}xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  objects.forEach((object) => {
-    pdf = `${pdf}${padLeft(offsets[object.number], 10)} 00000 n \n`;
-  });
-  pdf = `${pdf}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-  return pdf;
+  return startY + boxHeight;
 }
 
-export function exportReport(format, title, selectedReport, columns, reports) {
+function drawSummaryBox({ doc, margin, pageWidth, startY, totalRecords }) {
+  const contentWidth = pageWidth - margin * 2;
+
+  doc.setFillColor(230, 245, 245);
+  doc.rect(margin, startY, contentWidth, 16, "F");
+
+  doc.setDrawColor(0, 102, 102);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, startY, contentWidth, 16);
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setFont(undefined, "bold");
+  doc.text("Summary", margin + 3, startY + 5);
+
+  doc.setFontSize(9);
+  doc.setFont(undefined, "normal");
+  doc.text(`Total Records: ${totalRecords}`, margin + 3, startY + 12);
+
+  return startY + 16;
+}
+
+function getReportDisplayName(title, selectedReport) {
+  const titleValue = stringifyExportValue(title);
+  const reportName = titleValue.replace(/^Grievance Reports\s*-\s*/i, "");
+  return reportName || selectedReport || titleValue;
+}
+
+function tableColumnStyles(columnCount) {
+  const styles = {
+    0: { cellWidth: 10 },
+  };
+
+  if (columnCount > 7) {
+    styles[1] = { cellWidth: 18 };
+    styles[2] = { cellWidth: 30 };
+  }
+
+  return styles;
+}
+
+export async function exportGrievanceReportPdf({
+  title,
+  selectedReport,
+  columns,
+  reports,
+  generatedDate = new Date(),
+  save = true,
+}) {
+  const rows = reportExportRows(columns, reports);
+  const pageOrientation = columns.length > 6 ? "landscape" : "portrait";
+  const logo = await loadLogo();
+  const governmentLogo = await loadGovernmentLogo();
+  const doc = createProtectedPdf({ orientation: pageOrientation });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 12;
+  const reportName = getReportDisplayName(title, selectedReport);
+  const fileName = reportFileName(title, selectedReport, "pdf");
+
+  drawHeader({
+    doc,
+    pageWidth,
+    margin,
+    rightLogo: logo,
+    leftLogo: governmentLogo,
+    title,
+  });
+
+  let contentY = 48;
+
+  contentY = drawMetadataBoxes({
+    doc,
+    margin,
+    pageWidth,
+    startY: contentY,
+    generatedDate,
+    reportName,
+    totalRecords: rows.length,
+  });
+
+  contentY += 6;
+  contentY = drawSummaryBox({
+    doc,
+    margin,
+    pageWidth,
+    startY: contentY,
+    totalRecords: rows.length,
+  });
+  contentY += 8;
+
+  addWatermark(doc, logo, pageWidth, pageHeight);
+
+  autoTable(doc, {
+    startY: contentY,
+    head: [["Na.", ...columns.map((column) => stringifyExportValue(column.label).toUpperCase())]],
+    body: rows.map((row, index) => [index + 1, ...row]),
+    theme: "grid",
+    styles: {
+      fontSize: columns.length > 6 ? 7 : 9,
+      cellPadding: 2,
+      overflow: "linebreak",
+      valign: "middle",
+    },
+    headStyles: {
+      fillColor: [0, 102, 102],
+      textColor: 255,
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+    columnStyles: tableColumnStyles(columns.length + 1),
+    margin: {
+      left: 12,
+      right: 12,
+      top: 52,
+    },
+    didDrawPage: () => {
+      const currentPageNumber = doc.getCurrentPageInfo().pageNumber;
+
+      if (currentPageNumber > 1) {
+        drawHeader({
+          doc,
+          pageWidth,
+          margin,
+          rightLogo: logo,
+          leftLogo: governmentLogo,
+          title,
+        });
+        addWatermark(doc, logo, pageWidth, pageHeight);
+      }
+
+      addFooter(doc, pageWidth, pageHeight);
+    },
+  });
+
+  if (save) {
+    doc.save(fileName);
+  }
+
+  return doc;
+}
+
+export async function exportReport(format, title, selectedReport, columns, reports) {
   const rows = reportExportRows(columns, reports);
 
   if (format === EXPORT_FORMATS.CSV) {
@@ -340,7 +455,7 @@ export function exportReport(format, title, selectedReport, columns, reports) {
       `\uFEFF${buildCsv(columns, rows)}`,
       "text/csv;charset=utf-8;",
     );
-    return;
+    return null;
   }
 
   if (format === EXPORT_FORMATS.EXCEL) {
@@ -349,14 +464,17 @@ export function exportReport(format, title, selectedReport, columns, reports) {
       buildExcelHtml(title, columns, rows),
       "application/vnd.ms-excel;charset=utf-8;",
     );
-    return;
+    return null;
   }
 
   if (format === EXPORT_FORMATS.PDF) {
-    downloadFile(
-      reportFileName(title, selectedReport, "pdf"),
-      buildPdfDocument(buildPdfPages(title, columns, rows)),
-      "application/pdf",
-    );
+    return exportGrievanceReportPdf({
+      title,
+      selectedReport,
+      columns,
+      reports,
+    });
   }
+
+  return null;
 }

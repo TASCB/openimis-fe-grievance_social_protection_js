@@ -4,6 +4,10 @@ import { injectIntl } from "react-intl";
 import { connect } from "react-redux";
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   Paper,
   Table,
@@ -14,13 +18,18 @@ import {
   Typography,
 } from "@material-ui/core";
 import DescriptionIcon from "@material-ui/icons/Description";
-import PictureAsPdfIcon from "@material-ui/icons/PictureAsPdf";
+import GetAppIcon from "@material-ui/icons/GetApp";
 import SearchIcon from "@material-ui/icons/Search";
 import TableChartIcon from "@material-ui/icons/TableChart";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { ProgressOrError, decodeId, formatMessage, withModulesManager } from "@openimis/fe-core";
-import { GRIEVANCE_REPORT_OPTIONS, GRIEVANCE_REPORT_TYPES, MODULE_NAME } from "../constants";
-import { fetchGrievanceReports } from "../actions";
+import {
+  GRIEVANCE_REPORT_OPTIONS,
+  GRIEVANCE_REPORT_TYPES,
+  MODULE_NAME,
+  RIGHT_TICKET_SEARCH,
+} from "../constants";
+import { fetchGrievanceReports, fetchGrievanceReportsForExport } from "../actions";
 import TicketReportFilter from "./TicketReportFilter";
 import { EXPORT_FORMATS, exportReport } from "../utils/reportExport";
 
@@ -184,12 +193,15 @@ function TicketReportSearcher({
   fetchingReports,
   errorReports,
   initialReport,
+  rights,
 }) {
   const dispatch = useDispatch();
   const [filters, setFilters] = useState(() => ({
     ...DEFAULT_FILTERS,
     report: { id: "report", value: resolveReportType(initialReport) },
   }));
+  const [exportError, setExportError] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const selectedReport = normalizeReport(filters.report?.value);
 
@@ -249,7 +261,46 @@ function TicketReportSearcher({
       )}`,
     [intl, selectedReport],
   );
-  const exportDisabled = fetchingReports || reports.length === 0;
+  const handlePdfExport = useCallback(async () => {
+    if (!reports || reports.length === 0) {
+      setExportError(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+
+      const response = await dispatch(fetchGrievanceReportsForExport(modulesManager, queryParams));
+      const graphQLErrors = response?.payload?.errors;
+      if (graphQLErrors?.length) {
+        throw new Error(
+          graphQLErrors
+            .map((error) => error.message)
+            .filter(Boolean)
+            .join(", "),
+        );
+      }
+
+      const responseRows = response?.payload?.data?.grievanceReports;
+      const exportRows = Array.isArray(responseRows) ? responseRows : reports;
+
+      if (!exportRows || exportRows.length === 0) {
+        throw new Error(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
+      }
+
+      await exportReport(EXPORT_FORMATS.PDF, reportTitle, selectedReport, columns, exportRows);
+      setExportError(null);
+      setIsExporting(false);
+    } catch (error) {
+      setExportError(
+        error.message || formatMessage(intl, MODULE_NAME, "grievanceReport.exportError"),
+      );
+      setIsExporting(false);
+    }
+  }, [columns, dispatch, intl, modulesManager, queryParams, reportTitle, reports, selectedReport]);
+
+  const exportDisabled =
+    fetchingReports || isExporting || reports.length === 0 || !rights.includes(RIGHT_TICKET_SEARCH);
 
   return (
     <Paper className={classes.paper}>
@@ -297,13 +348,11 @@ function TicketReportSearcher({
             className={classes.exportButton}
             color="primary"
             variant="outlined"
-            startIcon={<PictureAsPdfIcon />}
-            onClick={() =>
-              exportReport(EXPORT_FORMATS.PDF, reportTitle, selectedReport, columns, reports)
-            }
+            startIcon={<GetAppIcon />}
+            onClick={handlePdfExport}
             disabled={exportDisabled}
           >
-            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportPdf")}
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.downloadPdf")}
           </Button>
         </Grid>
       </Grid>
@@ -347,6 +396,17 @@ function TicketReportSearcher({
           )}
         </TableBody>
       </Table>
+      {exportError && (
+        <Dialog open={!!exportError} fullWidth maxWidth="sm">
+          <DialogTitle>{formatMessage(intl, MODULE_NAME, "grievanceReport.error")}</DialogTitle>
+          <DialogContent>{exportError}</DialogContent>
+          <DialogActions>
+            <Button onClick={() => setExportError(null)} color="primary" variant="contained">
+              {formatMessage(intl, MODULE_NAME, "grievanceReport.ok")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Paper>
   );
 }
@@ -355,6 +415,7 @@ const mapStateToProps = (state) => ({
   reports: state.grievanceSocialProtection.grievanceReports || [],
   fetchingReports: state.grievanceSocialProtection.fetchingGrievanceReports,
   errorReports: state.grievanceSocialProtection.errorGrievanceReports,
+  rights: state.core?.user?.i_user?.rights ?? [],
 });
 
 export default withModulesManager(

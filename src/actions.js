@@ -175,6 +175,15 @@ export function fetchGrievanceReports(mm, params) {
   ]);
 }
 
+export function fetchGrievanceReportsForExport(mm, params) {
+  const payload = formatQuery("grievanceReports", params, GRIEVANCE_REPORT_PROJECTION());
+  return graphql(payload, [
+    REQUEST(ACTION_TYPE.EXPORT_GRIEVANCE_REPORTS),
+    SUCCESS(ACTION_TYPE.EXPORT_GRIEVANCE_REPORTS),
+    ERROR(ACTION_TYPE.EXPORT_GRIEVANCE_REPORTS),
+  ]);
+}
+
 export function fetchTicket(mm, filters) {
   const projections = [
     "id",

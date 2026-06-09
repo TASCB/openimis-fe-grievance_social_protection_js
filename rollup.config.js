@@ -24,6 +24,8 @@ export default {
     "classnames",
     "clsx",
     "history",
+    "jspdf",
+    "jspdf-autotable",
     /^lodash.*/,
     "moment",
     "prop-types",
