@@ -15,6 +15,7 @@ import {
   formatMessage,
 } from "@openimis/fe-core";
 import { MODULE_NAME } from "../constants";
+import GrievanceLocationPicker from "../pickers/GrievanceLocationPicker";
 
 const styles = (theme) => ({
   dialogTitle: theme.dialog.title,
@@ -25,6 +26,12 @@ const styles = (theme) => ({
 });
 
 const TICKET_FILTER_CONTRIBUTION_KEY = "ticket.Filter";
+const LOCATION_FILTERS = [
+  { id: "locationRegion", type: "R", label: "ticket.location.region" },
+  { id: "locationDistrict", type: "D", label: "ticket.location.district" },
+  { id: "locationWard", type: "W", label: "ticket.location.ward" },
+  { id: "locationVillage", type: "V", label: "ticket.location.village" },
+];
 
 class TicketFilter extends Component {
   debouncedOnChangeFilter = _debounce(
@@ -57,6 +64,34 @@ class TicketFilter extends Component {
     ];
     this.props.onChangeFilters(filters);
     this.props.setShowHistoryFilter(value);
+  };
+
+  _onChangeOverdue = (value) => {
+    this.props.onChangeFilters([
+      {
+        id: "overdue",
+        value: value ? true : null,
+        filter: value ? "overdue: true" : null,
+      },
+    ]);
+  };
+
+  _onChangeLocation = (index, value) => {
+    const locations = LOCATION_FILTERS.map(({ id }) => this._filterValue(id));
+    locations[index] = value;
+    for (let i = index + 1; i < locations.length; i += 1) locations[i] = null;
+    const selected = [...locations].reverse().find(Boolean);
+    const filters = LOCATION_FILTERS.map(({ id }, locationIndex) => ({
+      id,
+      value: locations[locationIndex],
+      filter: null,
+    }));
+    filters.push({
+      id: "eventLocation",
+      value: selected,
+      filter: selected ? `locationId: ${decodeId(selected.id)}` : null,
+    });
+    this.props.onChangeFilters(filters);
   };
 
   render() {
@@ -193,6 +228,26 @@ class TicketFilter extends Component {
             </Grid>
           }
         />
+        {LOCATION_FILTERS.map(({ id, type, label }, index) => (
+          <ControlledField
+            module={MODULE_NAME}
+            id={`ticketFilter.${id}`}
+            key={id}
+            field={
+              <Grid item xs={3} className={classes.item}>
+                <GrievanceLocationPicker
+                  locationType={type}
+                  label={formatMessage(this.props.intl, MODULE_NAME, label)}
+                  value={this._filterValue(id)}
+                  parentLocation={
+                    index > 0 ? this._filterValue(LOCATION_FILTERS[index - 1].id) : null
+                  }
+                  onChange={(location) => this._onChangeLocation(index, location)}
+                />
+              </Grid>
+            }
+          />
+        ))}
         <ControlledField
           module={MODULE_NAME}
           id="ticketFilter.dateOfIncidentFrom"
@@ -240,6 +295,24 @@ class TicketFilter extends Component {
           }
         />
         <Grid>
+          <ControlledField
+            module={MODULE_NAME}
+            id="TicketFilter.overdue"
+            field={
+              <Grid item xs={12} className={classes.item}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      color="primary"
+                      checked={!!this._filterValue("overdue")}
+                      onChange={(event) => this._onChangeOverdue(event.target.checked)}
+                    />
+                  }
+                  label={formatMessage(this.props.intl, MODULE_NAME, "ticketFilter.overdueOnly")}
+                />
+              </Grid>
+            }
+          />
           <ControlledField
             module={MODULE_NAME}
             id="TicketFilter.showHistory"

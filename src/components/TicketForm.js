@@ -14,7 +14,8 @@ import { bindActionCreators } from 'redux';
 import {
   clearTicket,
   clearPendingAttachments,
-  fetchComments, fetchGrievanceConfiguration, fetchTicket, reopenTicket,
+  fetchComments, fetchGrievanceConfiguration, fetchGrievanceLocationScope,
+  fetchTicket, reopenTicket,
   uploadTicketAttachments,
 } from '../actions';
 import { ticketLabel } from '../utils/utils';
@@ -37,6 +38,7 @@ class TicketForm extends Component {
 
   componentDidMount() {
     this.props.fetchGrievanceConfiguration();
+    this.props.fetchGrievanceLocationScope();
     if (this.props.ticketUuid) {
       this.setState((state, props) => ({ ticketUuid: props.ticketUuid }));
     }
@@ -177,14 +179,16 @@ class TicketForm extends Component {
     } = this.state;
 
     const readOnly = lockNew || !!ticket.validityTo || this.props.readOnly;
-    const actions = [
-      {
-        doIt: this.reopenTicket,
-        icon: <LockOpenIcon />,
-        onlyIfDirty: ticket.status !== TICKET_STATUSES.CLOSED,
-        disabled: ticket.isHistory,
-      },
-    ];
+    const actions = this.props.canEdit
+      ? [
+        {
+          doIt: this.reopenTicket,
+          icon: <LockOpenIcon />,
+          onlyIfDirty: ticket.status !== TICKET_STATUSES.CLOSED,
+          disabled: ticket.isHistory,
+        },
+      ]
+      : [];
 
     return (
       <>
@@ -232,6 +236,7 @@ const mapDispatchToProps = (dispatch) => bindActionCreators({
   fetchComments,
   reopenTicket,
   fetchGrievanceConfiguration,
+  fetchGrievanceLocationScope,
   uploadTicketAttachments,
   clearPendingAttachments,
   clearTicket,

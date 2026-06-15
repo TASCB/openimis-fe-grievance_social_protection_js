@@ -11,6 +11,7 @@ import { connect } from 'react-redux';
 import { injectIntl } from 'react-intl';
 import { bindActionCreators } from 'redux';
 import {
+  decodeId,
   formatDateTimeFromISO,
   formatMessage,
   ProgressOrError,
@@ -27,7 +28,13 @@ import DoneIcon from '@material-ui/icons/Done';
 import { createTicketComment, fetchComments, resolveGrievanceByComment } from '../actions';
 import GrievanceCommentDialog from '../dialogs/GrievanceCommentDialog';
 import { isEmptyObject } from '../utils/utils';
-import { MODULE_NAME, TICKET_STATUSES } from '../constants';
+import {
+  MODULE_NAME,
+  RIGHT_TICKET_COMMENT_CREATE,
+  RIGHT_TICKET_COMMENT_VIEW,
+  RIGHT_TICKET_RESOLVE,
+  TICKET_STATUSES,
+} from '../constants';
 import TicketPrintCommentTemplate from './TicketPrintCommentTemplate';
 
 const styles = (theme) => ({
@@ -61,7 +68,7 @@ class TicketCommentPanel extends Component {
   }
 
   query = () => {
-    if (this.props.edited) {
+    if (this.canViewComments() && this.props.edited) {
       this.props.fetchComments(this.props.edited);
     }
   };
@@ -78,7 +85,7 @@ class TicketCommentPanel extends Component {
 
   componentDidMount() {
     this.setState({ }, () => this.onChangeRowsPerPage(this.defaultPageSize));
-    if (!this.isReadOnly()) {
+    if (this.canViewComments() && !this.isReadOnly()) {
       this.interval = setInterval(this.reload, 5000);
     }
   }
@@ -121,7 +128,9 @@ class TicketCommentPanel extends Component {
   };
 
   reload = () => {
-    this.props.fetchComments(this.props.edited);
+    if (this.canViewComments()) {
+      this.props.fetchComments(this.props.edited);
+    }
   };
 
   updateCommenterType = (field, value) => {
@@ -146,7 +155,7 @@ class TicketCommentPanel extends Component {
 
   handleComment = (e) => {
     e.preventDefault();
-    if (this.state.comment) {
+    if (this.canCreateComment() && this.state.comment) {
       this.props.createTicketComment(
         this.state.comment,
         this.props.edited,
@@ -163,6 +172,7 @@ class TicketCommentPanel extends Component {
   };
 
   resolveGrievanceByComment = (comment) => {
+    if (!this.canResolveComment(comment)) return;
     this.props.resolveGrievanceByComment(
       comment.id,
       formatMessage(this.props.intl, MODULE_NAME, 'resolveGrievanceByComment.mutation.label'),
@@ -170,6 +180,43 @@ class TicketCommentPanel extends Component {
   };
 
   isReadOnly = () => this.props?.ticket?.status === TICKET_STATUSES.CLOSED || this.props?.ticket?.isHistory;
+
+  hasRight = (right) => (this.props.rights || []).includes(right);
+
+  isAssignedUser = () => {
+    const assignedUser = this.props.ticket?.attendingStaff;
+    const { currentUser } = this.props;
+    if (!assignedUser || !currentUser) return false;
+
+    const assignedUserId = assignedUser.id ? decodeId(assignedUser.id) : null;
+    return (assignedUserId && assignedUserId === currentUser.id)
+      || (assignedUser.username && assignedUser.username === currentUser.username);
+  };
+
+  canViewComments = () => this.hasRight(RIGHT_TICKET_COMMENT_VIEW);
+
+  hasCommentAccess = () => (
+    this.hasRight(RIGHT_TICKET_COMMENT_CREATE) || this.isAssignedUser()
+  );
+
+  canCreateComment = () => (
+    !this.isReadOnly() && this.hasCommentAccess()
+  );
+
+  canResolveComments = () => (
+    this.canViewComments() && this.hasRight(RIGHT_TICKET_RESOLVE)
+  );
+
+  canAccessPanel = () => (
+    this.canViewComments()
+    || this.hasCommentAccess()
+  );
+
+  canResolveComment = (comment) => (
+    this.canResolveComments()
+    && !this.isReadOnly()
+    && !comment?.isResolution
+  );
 
   getTicketCommentIds = () => {
     const jsonExt = this.props.ticket?.jsonExt;
@@ -198,12 +245,16 @@ class TicketCommentPanel extends Component {
       errorTicketComments, ticketComments,
     } = this.props;
 
+    if (!this.canAccessPanel()) return null;
+
     const headers = [
       'ticket.commenter',
       'ticket.comment',
       'ticket.dateCreated',
-      'ticket.markAsResolved',
     ];
+    if (this.canResolveComments()) {
+      headers.push('ticket.markAsResolved');
+    }
 
     const shouldHighlight = (row) => row?.isResolution;
 
@@ -269,19 +320,20 @@ class TicketCommentPanel extends Component {
       },
       (comment) => comment.comment,
       (comment) => formatDateTimeFromISO(this.props.modulesManager, intl, comment.dateCreated),
-      (comment) => (
+    ];
+    if (this.canResolveComments()) {
+      itemFormatters.push((comment) => (
         <Tooltip title={formatMessage(this.props.intl, MODULE_NAME, 'resolveButtonTooltip')}>
           <IconButton
             onClick={() => { this.resolveGrievanceByComment(comment); }}
-            disabled={this.isReadOnly()}
+            disabled={!this.canResolveComment(comment)}
             style={comment.isResolution ? { color: 'green' } : null}
           >
             <DoneIcon />
           </IconButton>
         </Tooltip>
-      ),
-
-    ];
+      ));
+    }
 
     const { comment, commenterType } = this.state;
 
@@ -292,51 +344,59 @@ class TicketCommentPanel extends Component {
 
         <Paper className={classes.paper}>
           <div style={{ textAlign: 'end', background: '#b7d4d8', height: '2.5em' }}>
-            <IconButton variant="contained" component="label" onClick={this.reload} disabled={this.isReadOnly()}>
-              <ReplayIcon />
-            </IconButton>
-            <GrievanceCommentDialog
-              handleComment={this.handleComment}
-              openCommentModal={this.state.openCommentModal}
-              handleOpenModal={this.handleOpenModal}
-              updateCommentAttribute={this.updateCommentAttribute}
-              comment={comment}
-              updateCommenterType={this.updateCommenterType}
-              commenterType={commenterType}
-              disabled={this.isReadOnly()}
-            />
-            <ReactToPrint content={() => this.componentRef}>
-              <PrintContextConsumer>
-                {({ handlePrint }) => (
-                  <IconButton
-                    variant="contained"
-                    component="label"
-                    onClick={handlePrint}
-                  >
-                    <PrintIcon />
-                  </IconButton>
-                )}
-              </PrintContextConsumer>
-            </ReactToPrint>
+            {this.canViewComments() && (
+              <IconButton variant="contained" component="label" onClick={this.reload}>
+                <ReplayIcon />
+              </IconButton>
+            )}
+            {this.hasCommentAccess() && (
+              <GrievanceCommentDialog
+                handleComment={this.handleComment}
+                openCommentModal={this.state.openCommentModal}
+                handleOpenModal={this.handleOpenModal}
+                updateCommentAttribute={this.updateCommentAttribute}
+                comment={comment}
+                updateCommenterType={this.updateCommenterType}
+                commenterType={commenterType}
+                disabled={!this.canCreateComment()}
+              />
+            )}
+            {this.canViewComments() && (
+              <ReactToPrint content={() => this.componentRef}>
+                <PrintContextConsumer>
+                  {({ handlePrint }) => (
+                    <IconButton
+                      variant="contained"
+                      component="label"
+                      onClick={handlePrint}
+                    >
+                      <PrintIcon />
+                    </IconButton>
+                  )}
+                </PrintContextConsumer>
+              </ReactToPrint>
+            )}
           </div>
-          <Table
-            module={MODULE_NAME}
-            fetch={this.props.fetchComments}
-            header={formatMessage(this.props.intl, MODULE_NAME, 'TicketCommentsPanel.table.header')}
-            headers={headers}
-            itemFormatters={itemFormatters}
-            items={this.isReadOnly() ? this.filterComments(ticketComments) : ticketComments}
-            withPagination
-            page={this.state.page}
-            pageSize={this.state.pageSize}
-            onChangePage={this.onChangePage}
-            onChangeRowsPerPage={this.onChangeRowsPerPage}
-            rowSecondaryHighlighted={shouldHighlight}
-            rowsPerPageOptions={this.rowsPerPageOptions}
-            defaultPageSize={this.defaultPageSize}
-            rights={this.rights}
-            defaultOrderBy="-dateCreated"
-          />
+          {this.canViewComments() && (
+            <Table
+              module={MODULE_NAME}
+              fetch={this.props.fetchComments}
+              header={formatMessage(this.props.intl, MODULE_NAME, 'TicketCommentsPanel.table.header')}
+              headers={headers}
+              itemFormatters={itemFormatters}
+              items={this.isReadOnly() ? this.filterComments(ticketComments) : ticketComments}
+              withPagination
+              page={this.state.page}
+              pageSize={this.state.pageSize}
+              onChangePage={this.onChangePage}
+              onChangeRowsPerPage={this.onChangeRowsPerPage}
+              rowSecondaryHighlighted={shouldHighlight}
+              rowsPerPageOptions={this.rowsPerPageOptions}
+              defaultPageSize={this.defaultPageSize}
+              rights={this.props.rights}
+              defaultOrderBy="-dateCreated"
+            />
+          )}
         </Paper>
         <div style={{ display: 'none' }}>
           <TicketPrintCommentTemplate
@@ -355,6 +415,8 @@ const mapStateToProps = (state) => ({
   fetchedTicketComments: state.grievanceSocialProtection.fetchedTicketComments,
   ticketComments: state.grievanceSocialProtection.ticketComments,
   ticket: state.grievanceSocialProtection.ticket,
+  rights: state.core?.user?.i_user?.rights ?? [],
+  currentUser: state.core?.user ?? null,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators({

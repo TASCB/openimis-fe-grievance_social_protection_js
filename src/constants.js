@@ -20,6 +20,9 @@ export const RIGHT_TICKET_SEARCH = 127000;
 export const RIGHT_TICKET_ADD = 127001;
 export const RIGHT_TICKET_EDIT = 127002;
 export const RIGHT_TICKET_DELETE = 127003;
+export const RIGHT_TICKET_COMMENT_VIEW = 127004;
+export const RIGHT_TICKET_COMMENT_CREATE = 127005;
+export const RIGHT_TICKET_RESOLVE = 127006;
 
 export const MODULE_NAME = "grievanceSocialProtection";
 export const FETCH_INDIVIDUAL_REF = "individual.actions.fetchIndividuals";

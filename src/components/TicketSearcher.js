@@ -6,7 +6,7 @@ import React, { Component, Fragment } from "react";
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
 import { injectIntl } from "react-intl";
-import { IconButton, Tooltip } from "@material-ui/core";
+import { Chip, IconButton, Tooltip } from "@material-ui/core";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import {
   coreConfirm,
@@ -26,6 +26,7 @@ import EditIcon from "@material-ui/icons/Edit";
 import { MODULE_NAME, RIGHT_TICKET_EDIT } from "../constants";
 import { fetchTicketSummaries, resolveTicket } from "../actions";
 import { isEmptyObject } from "../utils/utils";
+import { formatTimelineStatus, formatTimeTaken } from "../utils/grievanceMetrics";
 
 import TicketFilter from "./TicketFilter";
 import EnquiryDialog from "./EnquiryDialog";
@@ -37,6 +38,18 @@ const styles = (theme) => ({
   fab: theme.fab,
   button: { margin: theme.spacing(1) },
   item: { padding: theme.spacing(1) },
+  overdue: {
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
+  },
+  onTime: {
+    backgroundColor: theme.palette.success?.main || "#2e7d32",
+    color: theme.palette.success?.contrastText || "#fff",
+  },
+  resolvedLate: {
+    backgroundColor: theme.palette.warning?.main || "#ed6c02",
+    color: theme.palette.warning?.contrastText || "#fff",
+  },
 });
 
 class TicketSearcher extends Component {
@@ -107,7 +120,10 @@ class TicketSearcher extends Component {
       "tickets.category",
       "tickets.type",
       "tickets.status",
+      "tickets.overdue",
+      "tickets.timeTaken",
       "ticket.dateOfIncident",
+      "tickets.village",
       "tickets.reporter",
     ];
     if (this.isShowHistory()) base.push("tickets.version");
@@ -120,7 +136,10 @@ class TicketSearcher extends Component {
       ["category", true],
       ["title", true],
       ["status", true],
+      ["_overdue_sort", true],
+      ["_time_taken_duration", true],
       ["dateOfIncident", true],
+      ["event_location__name", true],
       ["reporter_id", true],
     ];
     if (this.isShowHistory()) base.push(["version", true]);
@@ -177,6 +196,22 @@ class TicketSearcher extends Component {
     return formatMessage(this.props.intl, MODULE_NAME, "anonymousUser");
   };
 
+  renderTimelineStatus = (ticket) => {
+    const { classes, intl } = this.props;
+    const className = {
+      OVERDUE: classes.overdue,
+      ON_TIME: classes.onTime,
+      RESOLVED_LATE: classes.resolvedLate,
+    }[ticket.timelineStatus];
+    return (
+      <Chip
+        size="small"
+        className={className}
+        label={formatTimelineStatus(intl, ticket.timelineStatus)}
+      />
+    );
+  };
+
   itemFormatters = () => {
     const { intl, modulesManager } = this.props;
     const formatters = [
@@ -184,7 +219,11 @@ class TicketSearcher extends Component {
       (ticket) => ticket.category,
       (ticket) => ticket.title,
       (ticket) => ticket.status,
-      (ticket) => (ticket.dateOfIncident ? formatDateFromISO(modulesManager, intl, ticket.dateOfIncident) : ""),
+      this.renderTimelineStatus,
+      (ticket) => formatTimeTaken(intl, ticket.timeTakenSeconds),
+      (ticket) =>
+        ticket.dateOfIncident ? formatDateFromISO(modulesManager, intl, ticket.dateOfIncident) : "",
+      (ticket) => ticket.village?.name || "-",
       this.renderReporter,
     ];
 

@@ -32,6 +32,7 @@ import {
 import { fetchGrievanceReports, fetchGrievanceReportsForExport } from "../actions";
 import TicketReportFilter from "./TicketReportFilter";
 import { EXPORT_FORMATS, exportReport } from "../utils/reportExport";
+import { formatTimelineStatus, formatTimeTaken } from "../utils/grievanceMetrics";
 
 function styles(theme) {
   return {
@@ -174,6 +175,14 @@ function reportColumns(report, intl) {
     { label: t("grievanceReport.dateReceived"), render: (row) => formatDate(row.dateReceived) },
     { label: t("grievanceReport.dateClosed"), render: (row) => formatDate(row.dateClosed) },
     { label: t("tickets.dueDate"), render: (row) => formatDate(row.dueDate) },
+    {
+      label: t("tickets.overdue"),
+      render: (row) => formatTimelineStatus(intl, row.timelineStatus),
+    },
+    {
+      label: t("tickets.timeTaken"),
+      render: (row) => formatTimeTaken(intl, row.timeTakenSeconds),
+    },
     {
       label: t("grievanceReport.closureDays"),
       render: (row) => formatNumber(row.closureDays),

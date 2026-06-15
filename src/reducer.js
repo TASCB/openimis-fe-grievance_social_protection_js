@@ -92,6 +92,11 @@ function reducer(
     errorGrievanceConfig: null,
     grievanceConfig: null,
 
+    fetchingGrievanceLocationScope: false,
+    fetchedGrievanceLocationScope: false,
+    errorGrievanceLocationScope: null,
+    grievanceLocationScope: null,
+
     fetchingGrievanceReports: false,
     fetchedGrievanceReports: false,
     errorGrievanceReports: null,
@@ -150,6 +155,28 @@ function reducer(
           id: decodeId(ticket.id),
         }))?.[0],
         errorTicket: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_LOCATION_SCOPE_REQ":
+      return {
+        ...state,
+        fetchingGrievanceLocationScope: true,
+        fetchedGrievanceLocationScope: false,
+        errorGrievanceLocationScope: null,
+      };
+    case "GRIEVANCE_LOCATION_SCOPE_RESP":
+      return {
+        ...state,
+        fetchingGrievanceLocationScope: false,
+        fetchedGrievanceLocationScope: true,
+        grievanceLocationScope: action.payload.data.grievanceLocationScope,
+        errorGrievanceLocationScope: formatGraphQLError(action.payload),
+      };
+    case "GRIEVANCE_LOCATION_SCOPE_ERR":
+      return {
+        ...state,
+        fetchingGrievanceLocationScope: false,
+        fetchedGrievanceLocationScope: false,
+        errorGrievanceLocationScope: formatServerError(action.payload),
       };
     case CLEAR(ACTION_TYPE.CLEAR_TICKET):
       return {

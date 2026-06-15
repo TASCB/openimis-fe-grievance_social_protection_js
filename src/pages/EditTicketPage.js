@@ -31,8 +31,16 @@ import {
 import _ from 'lodash';
 import { Save } from '@material-ui/icons';
 import { closeTicket, updateTicket, fetchTicket } from '../actions';
-import { EMPTY_STRING, MODULE_NAME, TICKET_STATUSES } from '../constants';
+import {
+  EMPTY_STRING,
+  MODULE_NAME,
+  RIGHT_TICKET_EDIT,
+  RIGHT_TICKET_RESOLVE,
+  TICKET_STATUS,
+  TICKET_STATUSES,
+} from '../constants';
 import TicketPrintTemplate from '../components/TicketPrintTemplate';
+import TicketLocationFields from '../components/TicketLocationFields';
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -91,6 +99,27 @@ class EditTicketPage extends Component {
     );
   };
 
+  hasRight = (right) => (this.props.rights || []).includes(right);
+
+  canEditTicket = () => this.hasRight(RIGHT_TICKET_EDIT);
+
+  canResolveTicket = () => this.hasRight(RIGHT_TICKET_RESOLVE);
+
+  canCloseTicket = () => (
+    this.canEditTicket() && this.canResolveTicket()
+  );
+
+  availableStatuses = () => (
+    this.canResolveTicket()
+      ? TICKET_STATUS
+      : TICKET_STATUS.filter(
+        (status) => ![
+          TICKET_STATUSES.RESOLVED,
+          TICKET_STATUSES.CLOSED,
+        ].includes(status),
+      )
+  );
+
   persistTicket = () => {
     this.props.updateTicket(
       this.state.stateEdited,
@@ -100,6 +129,7 @@ class EditTicketPage extends Component {
 
   save = () => {
     if (this.isClosingTransition()) {
+      if (!this.canCloseTicket()) return;
       this.setState({ closingDialogOpen: true, closingComment: EMPTY_STRING });
       return;
     }
@@ -109,6 +139,7 @@ class EditTicketPage extends Component {
   confirmClose = () => {
     const { user } = this.props;
     const { stateEdited, closingComment } = this.state;
+    if (!this.canCloseTicket()) return;
     if (!closingComment || !closingComment.trim()) return;
 
     this.props.closeTicket(
@@ -128,6 +159,15 @@ class EditTicketPage extends Component {
   updateAttribute = (k, v) => {
     this.setState((state) => ({
       stateEdited: { ...state.stateEdited, [k]: v },
+    }));
+  };
+
+  updateLocation = (location) => {
+    this.setState((state) => ({
+      stateEdited: {
+        ...state.stateEdited,
+        ...location,
+      },
     }));
   };
 
@@ -355,6 +395,7 @@ class EditTicketPage extends Component {
                     onChange={(v) => this.updateAttribute('status', v)}
                     required={false}
                     readOnly={propsReadOnly}
+                    statuses={this.availableStatuses()}
                   />
                 </Grid>
                 {!!paymentWindowLabel && (
@@ -409,6 +450,19 @@ class EditTicketPage extends Component {
                   />
                 </Grid>
                 <Grid item xs={12} className={classes.item}>
+                  <Typography variant="subtitle2">
+                    <FormattedMessage module={MODULE_NAME} id="ticket.location.title" />
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <TicketLocationFields
+                      value={stateEdited}
+                      onChange={this.updateLocation}
+                      readOnly={propsReadOnly}
+                      scope={this.props.grievanceLocationScope}
+                    />
+                  </Grid>
+                </Grid>
+                <Grid item xs={12} className={classes.item}>
                   <TextInput
                     label="ticket.description"
                     value={stateEdited.description}
@@ -448,17 +502,24 @@ class EditTicketPage extends Component {
                   />
                 </Grid>
                 <Grid item xs={11} className={classes.item} />
-                <Grid item xs={1} className={classes.item}>
-                  <IconButton
-                    variant="contained"
-                    component="label"
-                    color="primary"
-                    onClick={this.save}
-                    disabled={propsReadOnly || !this.doesTicketChange()}
-                  >
-                    <Save />
-                  </IconButton>
-                </Grid>
+                {this.canEditTicket() && (
+                  <Grid item xs={1} className={classes.item}>
+                    <IconButton
+                      data-testid="grievance-save"
+                      variant="contained"
+                      component="label"
+                      color="primary"
+                      onClick={this.save}
+                      disabled={
+                        propsReadOnly
+                        || !this.doesTicketChange()
+                        || (this.isClosingTransition() && !this.canCloseTicket())
+                      }
+                    >
+                      <Save />
+                    </IconButton>
+                  </Grid>
+                )}
               </Grid>
             </Paper>
           </Grid>
@@ -525,6 +586,8 @@ const mapStateToProps = (state, props) => ({
   grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
   comments: state.grievanceSocialProtection.ticketComments,
   user: state.core?.user ?? null,
+  rights: state.core?.user?.i_user?.rights ?? [],
+  grievanceLocationScope: state.grievanceSocialProtection.grievanceLocationScope,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(

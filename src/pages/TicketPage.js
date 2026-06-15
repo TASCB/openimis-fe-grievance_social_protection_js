@@ -12,7 +12,12 @@ import {
 } from "@openimis/fe-core";
 import TicketForm from "../components/TicketForm";
 import { updateTicket, createTicket } from "../actions";
-import { RIGHT_TICKET_ADD, RIGHT_TICKET_EDIT, TICKET_STATUSES } from "../constants";
+import {
+  RIGHT_TICKET_ADD,
+  RIGHT_TICKET_EDIT,
+  RIGHT_TICKET_SEARCH,
+  TICKET_STATUSES,
+} from "../constants";
 
 const styles = (theme) => ({
   page: theme.page,
@@ -55,8 +60,16 @@ class TicketPage extends Component {
       ticket,
       ticketVersion,
     } = this.props;
-    const readOnly = ticket?.status === TICKET_STATUSES.CLOSED || ticket?.isHistory;
-    if (!(rights.includes(RIGHT_TICKET_EDIT) || rights.includes(RIGHT_TICKET_ADD))) return null;
+    const isExistingTicket = !!ticketUuid;
+    const canAdd = rights.includes(RIGHT_TICKET_ADD);
+    const canEdit = rights.includes(RIGHT_TICKET_EDIT);
+    const canSearch = rights.includes(RIGHT_TICKET_SEARCH);
+    const canOpenPage = isExistingTicket ? canSearch : canAdd;
+    const readOnly = isExistingTicket && (
+      !canEdit || ticket?.status === TICKET_STATUSES.CLOSED || ticket?.isHistory
+    );
+
+    if (!canOpenPage) return null;
     return (
       <div className={`${readOnly ? classes.lockedPage : null} ${classes.page}`}>
         <TicketForm
@@ -64,11 +77,12 @@ class TicketPage extends Component {
           ticketUuid={ticketUuid}
           ticketVersion={ticketVersion}
           readOnly={readOnly}
+          canEdit={canEdit}
           back={() =>
             historyPush(modulesManager, history, "grievanceSocialProtection.route.tickets")
           }
-          add={rights.includes(RIGHT_TICKET_ADD) ? this.add : null}
-          save={rights.includes(RIGHT_TICKET_EDIT) ? this.save : null}
+          add={canAdd ? this.add : null}
+          save={canEdit ? this.save : null}
         />
       </div>
     );

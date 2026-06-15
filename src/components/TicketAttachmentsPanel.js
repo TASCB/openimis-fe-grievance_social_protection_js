@@ -106,6 +106,7 @@ class TicketAttachmentsPanel extends Component {
 
   flushPendingIfNeeded = async () => {
     const { edited, pendingAttachments } = this.props;
+    if (this.isReadOnly()) return;
     if (this.state.uploadedPending) return;
     if (!edited?.id) return;
     if (!pendingAttachments || pendingAttachments.length === 0) return;
@@ -118,7 +119,8 @@ class TicketAttachmentsPanel extends Component {
     this.setState({ uploadedPending: false });
   };
 
-  isReadOnly = () => this.props?.edited?.status === TICKET_STATUSES.CLOSED
+  isReadOnly = () => this.props.readOnly
+    || this.props?.edited?.status === TICKET_STATUSES.CLOSED
     || this.props?.edited?.isHistory;
 
   validateFiles = (files) => {
@@ -145,6 +147,7 @@ class TicketAttachmentsPanel extends Component {
   };
 
   handleFiles = async (event) => {
+    if (this.isReadOnly()) return;
     const picked = Array.from(event.target.files || []);
     event.target.value = '';
     if (picked.length === 0) return;

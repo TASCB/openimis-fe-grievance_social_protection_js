@@ -14,6 +14,7 @@ import {
 } from "../actions";
 import { EMPTY_STRING, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
+import TicketLocationFields from "../components/TicketLocationFields";
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -62,11 +63,15 @@ class AddTicketPage extends Component {
 
   componentDidMount() {
     this.syncPreviewUrls(this.props.pendingAttachments);
+    this.applyLocationScope();
   }
 
   componentDidUpdate(prevProps) {
     if (prevProps.pendingAttachments !== this.props.pendingAttachments) {
       this.syncPreviewUrls(this.props.pendingAttachments);
+    }
+    if (prevProps.grievanceLocationScope !== this.props.grievanceLocationScope) {
+      this.applyLocationScope();
     }
   }
 
@@ -157,6 +162,32 @@ class AddTicketPage extends Component {
   updateBenefitPlan = (field, value) => {
     this.updateAttribute("reporter", null);
     this.setState((state) => ({ benefitPlan: value }));
+  };
+
+  applyLocationScope = () => {
+    const scope = this.props.grievanceLocationScope;
+    if (!scope?.assignedLocation || this.state.stateEdited.eventLocation) return;
+    this.setState((state) => ({
+      isSaved: false,
+      stateEdited: {
+        ...state.stateEdited,
+        region: scope.region ?? null,
+        district: scope.district ?? null,
+        ward: scope.ward ?? null,
+        village: scope.village ?? null,
+        eventLocation: scope.assignedLocation,
+      },
+    }));
+  };
+
+  updateLocation = (location) => {
+    this.setState((state) => ({
+      isSaved: false,
+      stateEdited: {
+        ...state.stateEdited,
+        ...location,
+      },
+    }));
   };
 
   handleSelectFiles = (event) => {
@@ -560,6 +591,30 @@ class AddTicketPage extends Component {
                 </Grid>
 
                 <Grid item xs={12} className={classes.item}>
+                  <Typography variant="subtitle2">
+                    <FormattedMessage module={MODULE_NAME} id="ticket.location.title" />
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    <FormattedMessage
+                      module={MODULE_NAME}
+                      id={
+                        this.props.grievanceLocationScope?.required
+                          ? "ticket.location.requiredHelp"
+                          : "ticket.location.optionalHelp"
+                      }
+                    />
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <TicketLocationFields
+                      value={stateEdited}
+                      onChange={this.updateLocation}
+                      readOnly={isSaved}
+                      scope={this.props.grievanceLocationScope}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Grid item xs={12} className={classes.item}>
                   <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
                     <FormattedMessage module={MODULE_NAME} id="ticket.attachments.optional" />
                   </Typography>
@@ -618,6 +673,8 @@ class AddTicketPage extends Component {
                       !stateEdited.title ||
                       (this.isPaymentCategory() &&
                         (!this.state.paymentWindow || !this.state.paymentYear)) ||
+                      (this.props.grievanceLocationScope?.required &&
+                        !stateEdited.eventLocation) ||
                       isSaved ||
                       ((stateEdited.reporterType === "individual" ||
                         stateEdited.reporterType === "beneficiary" ||
@@ -643,6 +700,7 @@ function mapStateToProps(state, props) {
     submittingMutation: state.grievanceSocialProtection.submittingMutation,
     mutation: state.grievanceSocialProtection.mutation,
     grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
+    grievanceLocationScope: state.grievanceSocialProtection.grievanceLocationScope,
     pendingAttachments: state.grievanceSocialProtection.pendingAttachments,
   };
 }

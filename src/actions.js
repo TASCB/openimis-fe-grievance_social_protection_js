@@ -41,6 +41,9 @@ const GRIEVANCE_REPORT_PROJECTION = () => [
   "dueDate",
   "closureDays",
   "overdueDays",
+  "overdue",
+  "timelineStatus",
+  "timeTakenSeconds",
 ];
 
 const CATEGORY_FULL_PROJECTION = () => [
@@ -63,6 +66,7 @@ const GRIEVANCE_TYPE_PROJECTION = () => [
 
 const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "timeline", "isActive"];
 const GRIEVANCE_CHANNEL_PROJECTION = () => ["id", "code", "name", "isActive"];
+const LOCATION_PROJECTION = "id uuid code name type";
 
 function formatIdGQL(id) {
   if (!id) return id;
@@ -72,9 +76,7 @@ function formatIdGQL(id) {
 function formatTimelineGQL(timeline) {
   if (timeline === undefined || timeline === null || timeline === "") return "";
   const parsedTimeline = Number.parseInt(timeline, 10);
-  return Number.isNaN(parsedTimeline) || parsedTimeline < 0
-    ? ""
-    : `timeline: ${parsedTimeline}`;
+  return Number.isNaN(parsedTimeline) || parsedTimeline < 0 ? "" : `timeline: ${parsedTimeline}`;
 }
 
 export function fetchCategoryForPicker(mm, filters) {
@@ -145,6 +147,11 @@ export function fetchTicketSummaries(mm, filters) {
     "status",
     "priority",
     "dueDate",
+    "expectedResolutionDate",
+    "closedAt",
+    "overdue",
+    "timelineStatus",
+    "timeTakenSeconds",
     "reporter",
     "reporterId",
     "reporterType",
@@ -161,6 +168,11 @@ export function fetchTicketSummaries(mm, filters) {
     "reporterFirstName",
     "reporterLastName",
     "reporterDob",
+    `eventLocation{${LOCATION_PROJECTION}}`,
+    `region{${LOCATION_PROJECTION}}`,
+    `district{${LOCATION_PROJECTION}}`,
+    `ward{${LOCATION_PROJECTION}}`,
+    `village{${LOCATION_PROJECTION}}`,
   ];
   const payload = formatPageQueryWithCount("tickets", filters, projections);
   return graphql(payload, "TICKET_TICKETS");
@@ -211,9 +223,28 @@ export function fetchTicket(mm, filters) {
     "reporterFirstName",
     "reporterLastName",
     "reporterDob",
+    `eventLocation{${LOCATION_PROJECTION}}`,
+    `region{${LOCATION_PROJECTION}}`,
+    `district{${LOCATION_PROJECTION}}`,
+    `ward{${LOCATION_PROJECTION}}`,
+    `village{${LOCATION_PROJECTION}}`,
   ];
   const payload = formatPageQueryWithCount("tickets", filters, projections);
   return graphql(payload, "TICKET_TICKET");
+}
+
+export function fetchGrievanceLocationScope() {
+  const payload = formatQuery("grievanceLocationScope", null, [
+    "restricted",
+    "required",
+    `assignedLocation{${LOCATION_PROJECTION}}`,
+    `assignedLocations{${LOCATION_PROJECTION}}`,
+    `region{${LOCATION_PROJECTION}}`,
+    `district{${LOCATION_PROJECTION}}`,
+    `ward{${LOCATION_PROJECTION}}`,
+    `village{${LOCATION_PROJECTION}}`,
+  ]);
+  return graphql(payload, "GRIEVANCE_LOCATION_SCOPE");
 }
 
 export function fetchComments(ticket) {
@@ -244,6 +275,21 @@ function formatJsonExtGQL(jsonExt) {
   return `jsonExt: ${JSON.stringify(jsonExtString)}`;
 }
 
+function locationId(location) {
+  if (!location?.id) return null;
+  return isBase64Encoded(location.id) ? decodeId(location.id) : location.id;
+}
+
+function formatLocationGQL(ticket) {
+  return `
+    regionId: ${locationId(ticket.region) ?? "null"}
+    districtId: ${locationId(ticket.district) ?? "null"}
+    wardId: ${locationId(ticket.ward) ?? "null"}
+    villageId: ${locationId(ticket.village) ?? "null"}
+    eventLocationId: ${locationId(ticket.eventLocation) ?? "null"}
+  `;
+}
+
 export function formatTicketGQL(ticket) {
   return `
     ${ticket.id !== undefined && ticket.id !== null ? `id: "${ticket.id}"` : ""}
@@ -270,6 +316,7 @@ export function formatTicketGQL(ticket) {
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
     ${formatJsonExtGQL(ticket.jsonExt)}
+    ${formatLocationGQL(ticket)}
   `;
 }
 
@@ -299,6 +346,7 @@ export function formatUpdateTicketGQL(ticket) {
     ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
+    ${formatLocationGQL(ticket)}
   `;
 }
 
@@ -324,6 +372,7 @@ export function formatCloseTicketGQL(ticket, closingComment, commenter, commente
     }
     ${commenterType ? `commenterType: "${commenterType}"` : ""}
     ${closingComment ? `comment: "${formatGQLString(closingComment)}"` : ""}
+    ${formatLocationGQL(ticket)}
   `;
 }
 
