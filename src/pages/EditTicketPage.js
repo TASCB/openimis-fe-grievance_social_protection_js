@@ -7,6 +7,7 @@
 import React, { Component, useRef } from 'react';
 import ReactToPrint, { PrintContextConsumer } from 'react-to-print';
 import PrintIcon from '@material-ui/icons/Print';
+import Alert from '@material-ui/lab/Alert';
 import { withTheme, withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -48,6 +49,9 @@ const styles = (theme) => ({
   item: theme.paper.item,
   fullHeight: {
     height: '100%',
+  },
+  descriptionHelperAlert: {
+    marginTop: theme.spacing(1),
   },
 });
 
@@ -437,7 +441,7 @@ class EditTicketPage extends Component {
                     value={stateEdited.channel}
                     onChange={(v) => this.updateAttribute('channel', v)}
                     required
-                    readOnly
+                    readOnly={propsReadOnly}
                   />
                 </Grid>
                 <Grid item xs={6} className={classes.item}>
@@ -470,6 +474,9 @@ class EditTicketPage extends Component {
                     required={false}
                     readOnly={propsReadOnly}
                   />
+                  <Alert severity="info" className={classes.descriptionHelperAlert}>
+                    <FormattedMessage module={MODULE_NAME} id="ticket.description.helperText" />
+                  </Alert>
                 </Grid>
               </Grid>
             </Paper>

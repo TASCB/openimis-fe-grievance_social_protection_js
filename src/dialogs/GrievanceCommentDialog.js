@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Grid } from '@material-ui/core';
+import Alert from '@material-ui/lab/Alert';
 import { injectIntl } from 'react-intl';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
@@ -71,6 +72,9 @@ function GrievanceCommentDialog({
             Add Comment to a Grievance
           </DialogTitle>
           <DialogContent>
+            <Alert severity="info" variant="outlined" style={{ marginBottom: '12px' }}>
+              {formatMessage('ticket.comment.helperText')}
+            </Alert>
             <div
               style={{ backgroundColor: '#DFEDEF', paddingLeft: '10px', paddingBottom: '10px' }}
             >

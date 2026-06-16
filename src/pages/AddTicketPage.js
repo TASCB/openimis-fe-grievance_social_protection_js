@@ -4,6 +4,7 @@
 /* eslint-disable react/destructuring-assignment */
 import React, { Component } from "react";
 import { withTheme, withStyles } from "@material-ui/core/styles";
+import Alert from "@material-ui/lab/Alert";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { Grid, Paper, Typography, Divider, IconButton, Button, Chip } from "@material-ui/core";
@@ -39,6 +40,9 @@ const styles = (theme) => ({
     borderRadius: 4,
     border: `1px solid ${theme.palette.divider}`,
     marginRight: 8,
+  },
+  descriptionHelperAlert: {
+    marginTop: theme.spacing(1),
   },
 });
 
@@ -557,7 +561,7 @@ class AddTicketPage extends Component {
                     value={stateEdited.channel}
                     onChange={(v) => this.updateAttribute("channel", v)}
                     required
-                    readOnly
+                    readOnly={isSaved}
                   />
                 </Grid>
 
@@ -588,6 +592,9 @@ class AddTicketPage extends Component {
                     required={false}
                     readOnly={isSaved}
                   />
+                  <Alert severity="info" className={classes.descriptionHelperAlert}>
+                    <FormattedMessage module={MODULE_NAME} id="ticket.description.helperText" />
+                  </Alert>
                 </Grid>
 
                 <Grid item xs={12} className={classes.item}>

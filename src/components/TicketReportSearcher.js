@@ -25,8 +25,10 @@ import { withStyles, withTheme } from "@material-ui/core/styles";
 import { ProgressOrError, decodeId, formatMessage, withModulesManager } from "@openimis/fe-core";
 import {
   GRIEVANCE_REPORT_OPTIONS,
+  GRIEVANCE_REPORT_STATUS_ORDER,
   GRIEVANCE_REPORT_TYPES,
   MODULE_NAME,
+  PAA_GRIEVANCE_FILTER_TYPES,
   RIGHT_TICKET_SEARCH,
 } from "../constants";
 import { fetchGrievanceReports, fetchGrievanceReportsForExport } from "../actions";
@@ -70,7 +72,46 @@ const DEFAULT_FILTERS = {
     id: "report",
     value: GRIEVANCE_REPORT_TYPES.CATEGORY,
   },
+  paaGrievanceFilter: {
+    id: "paaGrievanceFilter",
+    value: PAA_GRIEVANCE_FILTER_TYPES.WITHOUT_GRIEVANCE,
+  },
+  grievanceCount: {
+    id: "grievanceCount",
+    value: 1,
+  },
 };
+
+const REPORT_STATUS_ALIASES = {
+  RECEIVED: "RECEIVED",
+  Received: "RECEIVED",
+  UNRESOLVED: "UNRESOLVED",
+  Unresolved: "UNRESOLVED",
+  CLOSED: "CLOSED",
+  Closed: "CLOSED",
+};
+
+function orderReportRows(report, rows) {
+  if (report !== GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS || !Array.isArray(rows)) {
+    return rows || [];
+  }
+
+  const statusRanks = new Map(
+    GRIEVANCE_REPORT_STATUS_ORDER.map((status, index) => [status, index]),
+  );
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((left, right) => {
+      const leftStatus = REPORT_STATUS_ALIASES[left.row.status || left.row.label];
+      const rightStatus = REPORT_STATUS_ALIASES[right.row.status || right.row.label];
+      const leftRank = statusRanks.has(leftStatus) ? statusRanks.get(leftStatus) : Number.MAX_VALUE;
+      const rightRank = statusRanks.has(rightStatus)
+        ? statusRanks.get(rightStatus)
+        : Number.MAX_VALUE;
+      return leftRank - rightRank || left.index - right.index;
+    })
+    .map(({ row }) => row);
+}
 
 function resolveReportType(report) {
   return Object.values(GRIEVANCE_REPORT_TYPES).includes(report)
@@ -127,6 +168,15 @@ function formatNumber(value) {
 
 function normalizeReport(value) {
   return value?.value || value || GRIEVANCE_REPORT_TYPES.CATEGORY;
+}
+
+function normalizeNonNegativeInteger(value) {
+  const normalizedValue = value?.value ?? value;
+  if (normalizedValue === null || normalizedValue === undefined || normalizedValue === "") {
+    return 0;
+  }
+  const parsedValue = Number.parseInt(normalizedValue, 10);
+  return Number.isNaN(parsedValue) || parsedValue < 0 ? 0 : parsedValue;
 }
 
 function reportLabel(report, intl) {
@@ -245,11 +295,25 @@ function TicketReportSearcher({
     const dateTo = normalizeDate(filters.dateTo?.value);
     const agentId = normalizeId(filters.agent?.value);
     const paaId = parseLocationId(filters);
+    const paaGrievanceFilter =
+      filters.paaGrievanceFilter?.value?.value ||
+      filters.paaGrievanceFilter?.value ||
+      PAA_GRIEVANCE_FILTER_TYPES.WITHOUT_GRIEVANCE;
+    const grievanceCount = normalizeNonNegativeInteger(filters.grievanceCount?.value);
 
     if (dateFrom) params.push(`dateFrom: "${dateFrom}"`);
     if (dateTo) params.push(`dateTo: "${dateTo}"`);
     if (agentId) params.push(`agentId: "${agentId}"`);
     if (paaId) params.push(`paaId: "${paaId}"`);
+    if (selectedReport === GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES) {
+      params.push(`paaGrievanceFilter: "${paaGrievanceFilter}"`);
+      if (
+        paaGrievanceFilter === PAA_GRIEVANCE_FILTER_TYPES.LESS_THAN ||
+        paaGrievanceFilter === PAA_GRIEVANCE_FILTER_TYPES.MORE_THAN
+      ) {
+        params.push(`grievanceCount: ${grievanceCount}`);
+      }
+    }
     return params;
   }, [filters, selectedReport]);
 
@@ -262,6 +326,10 @@ function TicketReportSearcher({
   }, [fetchReports]);
 
   const columns = useMemo(() => reportColumns(selectedReport, intl), [intl, selectedReport]);
+  const orderedReports = useMemo(
+    () => orderReportRows(selectedReport, reports),
+    [reports, selectedReport],
+  );
   const reportTitle = useMemo(
     () =>
       `${formatMessage(intl, MODULE_NAME, "grievanceReport.title")} - ${reportLabel(
@@ -270,46 +338,66 @@ function TicketReportSearcher({
       )}`,
     [intl, selectedReport],
   );
-  const handlePdfExport = useCallback(async () => {
-    if (!reports || reports.length === 0) {
-      setExportError(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
-      return;
-    }
+  const handleExport = useCallback(
+    async (format) => {
+      if (orderedReports.length === 0) {
+        setExportError(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
+        return;
+      }
 
-    try {
-      setIsExporting(true);
+      try {
+        setIsExporting(true);
 
-      const response = await dispatch(fetchGrievanceReportsForExport(modulesManager, queryParams));
-      const graphQLErrors = response?.payload?.errors;
-      if (graphQLErrors?.length) {
-        throw new Error(
-          graphQLErrors
-            .map((error) => error.message)
-            .filter(Boolean)
-            .join(", "),
+        const response = await dispatch(
+          fetchGrievanceReportsForExport(modulesManager, queryParams),
         );
+        const graphQLErrors = response?.payload?.errors;
+        if (graphQLErrors?.length) {
+          throw new Error(
+            graphQLErrors
+              .map((error) => error.message)
+              .filter(Boolean)
+              .join(", "),
+          );
+        }
+
+        const responseRows = response?.payload?.data?.grievanceReports;
+        const exportRows = orderReportRows(
+          selectedReport,
+          Array.isArray(responseRows) ? responseRows : orderedReports,
+        );
+
+        if (!exportRows || exportRows.length === 0) {
+          throw new Error(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
+        }
+
+        await exportReport(format, reportTitle, selectedReport, columns, exportRows);
+        setExportError(null);
+        setIsExporting(false);
+      } catch (error) {
+        setExportError(
+          error.message || formatMessage(intl, MODULE_NAME, "grievanceReport.exportError"),
+        );
+        setIsExporting(false);
       }
-
-      const responseRows = response?.payload?.data?.grievanceReports;
-      const exportRows = Array.isArray(responseRows) ? responseRows : reports;
-
-      if (!exportRows || exportRows.length === 0) {
-        throw new Error(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
-      }
-
-      await exportReport(EXPORT_FORMATS.PDF, reportTitle, selectedReport, columns, exportRows);
-      setExportError(null);
-      setIsExporting(false);
-    } catch (error) {
-      setExportError(
-        error.message || formatMessage(intl, MODULE_NAME, "grievanceReport.exportError"),
-      );
-      setIsExporting(false);
-    }
-  }, [columns, dispatch, intl, modulesManager, queryParams, reportTitle, reports, selectedReport]);
+    },
+    [
+      columns,
+      dispatch,
+      intl,
+      modulesManager,
+      orderedReports,
+      queryParams,
+      reportTitle,
+      selectedReport,
+    ],
+  );
 
   const exportDisabled =
-    fetchingReports || isExporting || reports.length === 0 || !rights.includes(RIGHT_TICKET_SEARCH);
+    fetchingReports ||
+    isExporting ||
+    orderedReports.length === 0 ||
+    !rights.includes(RIGHT_TICKET_SEARCH);
 
   return (
     <Paper className={classes.paper}>
@@ -334,9 +422,7 @@ function TicketReportSearcher({
             color="primary"
             variant="outlined"
             startIcon={<DescriptionIcon />}
-            onClick={() =>
-              exportReport(EXPORT_FORMATS.CSV, reportTitle, selectedReport, columns, reports)
-            }
+            onClick={() => handleExport(EXPORT_FORMATS.CSV)}
             disabled={exportDisabled}
           >
             {formatMessage(intl, MODULE_NAME, "grievanceReport.exportCsv")}
@@ -346,9 +432,7 @@ function TicketReportSearcher({
             color="primary"
             variant="outlined"
             startIcon={<TableChartIcon />}
-            onClick={() =>
-              exportReport(EXPORT_FORMATS.EXCEL, reportTitle, selectedReport, columns, reports)
-            }
+            onClick={() => handleExport(EXPORT_FORMATS.EXCEL)}
             disabled={exportDisabled}
           >
             {formatMessage(intl, MODULE_NAME, "grievanceReport.exportExcel")}
@@ -358,7 +442,7 @@ function TicketReportSearcher({
             color="primary"
             variant="outlined"
             startIcon={<GetAppIcon />}
-            onClick={handlePdfExport}
+            onClick={() => handleExport(EXPORT_FORMATS.PDF)}
             disabled={exportDisabled}
           >
             {formatMessage(intl, MODULE_NAME, "grievanceReport.downloadPdf")}
@@ -383,7 +467,7 @@ function TicketReportSearcher({
           </TableRow>
         </TableHead>
         <TableBody>
-          {reports.length === 0 && !fetchingReports ? (
+          {orderedReports.length === 0 && !fetchingReports ? (
             <TableRow>
               <TableCell
                 colSpan={columns.length}
@@ -393,7 +477,7 @@ function TicketReportSearcher({
               </TableCell>
             </TableRow>
           ) : (
-            reports.map((row, rowIndex) => (
+            orderedReports.map((row, rowIndex) => (
               <TableRow key={`${row.report}-${row.ticketId || row.label || rowIndex}`}>
                 {columns.map((column) => (
                   <TableCell key={column.label} className={classes.reportCell}>

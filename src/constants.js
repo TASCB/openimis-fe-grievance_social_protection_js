@@ -41,6 +41,34 @@ export const GRIEVANCE_REPORT_TYPES = {
   OVERDUE_BY_PAA: "OVERDUE_BY_PAA",
 };
 
+export const GRIEVANCE_REPORT_STATUS_ORDER = ["RECEIVED", "UNRESOLVED", "CLOSED"];
+
+export const PAA_GRIEVANCE_FILTER_TYPES = {
+  WITHOUT_GRIEVANCE: "WITHOUT_GRIEVANCE",
+  WITH_GRIEVANCE: "WITH_GRIEVANCE",
+  LESS_THAN: "LESS_THAN",
+  MORE_THAN: "MORE_THAN",
+};
+
+export const PAA_GRIEVANCE_FILTER_OPTIONS = [
+  {
+    value: PAA_GRIEVANCE_FILTER_TYPES.WITHOUT_GRIEVANCE,
+    label: "grievanceReport.paaFilter.without",
+  },
+  {
+    value: PAA_GRIEVANCE_FILTER_TYPES.WITH_GRIEVANCE,
+    label: "grievanceReport.paaFilter.with",
+  },
+  {
+    value: PAA_GRIEVANCE_FILTER_TYPES.LESS_THAN,
+    label: "grievanceReport.paaFilter.lessThan",
+  },
+  {
+    value: PAA_GRIEVANCE_FILTER_TYPES.MORE_THAN,
+    label: "grievanceReport.paaFilter.moreThan",
+  },
+];
+
 export const GRIEVANCE_REPORT_OPTIONS = [
   {
     value: GRIEVANCE_REPORT_TYPES.CATEGORY,

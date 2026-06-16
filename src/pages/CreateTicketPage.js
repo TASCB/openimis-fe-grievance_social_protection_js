@@ -293,7 +293,7 @@ function CreateTicketPage({
                   pubRef="grievanceSocialProtection.ChannelPicker"
                   value={stateEdited.channel}
                   onChange={(v) => updateAttribute("channel", v)}
-                  readOnly
+                  readOnly={isSaved}
                 />
               </Grid>
 

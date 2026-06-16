@@ -2,6 +2,11 @@ import React from "react";
 import { useTranslations, Autocomplete, useGraphqlQuery } from "@openimis/fe-core";
 
 const PAGE_SIZE = 100;
+const REQUIRED_CHANNELS = ["Web", "USSD", "Mobile App", "Call Center"];
+
+function mergeChannelOptions(...channelLists) {
+  return Array.from(new Set(REQUIRED_CHANNELS.concat(...channelLists).filter(Boolean)));
+}
 
 const CHANNELS_QUERY = `
   query GetGrievanceChannels($first: Int) {
@@ -56,7 +61,7 @@ function ChannelPicker(props) {
   );
   const channelOptions = data?.grievanceChannels?.edges?.map(({ node }) => node.name) ?? [];
   const fallbackOptions = fallbackData?.grievanceConfig?.grievanceChannels ?? [];
-  const options = channelOptions.length ? channelOptions : fallbackOptions;
+  const options = mergeChannelOptions(channelOptions, fallbackOptions);
 
   return (
     <Autocomplete
