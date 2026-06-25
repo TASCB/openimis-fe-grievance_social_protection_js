@@ -7,7 +7,17 @@ import { withTheme, withStyles } from "@material-ui/core/styles";
 import Alert from "@material-ui/lab/Alert";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
-import { Grid, Paper, Typography, Divider, IconButton, Button, Chip } from "@material-ui/core";
+import {
+  Grid,
+  Paper,
+  Typography,
+  Divider,
+  IconButton,
+  Button,
+  Chip,
+  Checkbox,
+  FormControlLabel,
+} from "@material-ui/core";
 import { Save, CloudUpload } from "@material-ui/icons";
 import { TextInput, PublishedComponent, FormattedMessage, SelectInput } from "@openimis/fe-core";
 import {
@@ -15,7 +25,14 @@ import {
 } from "../actions";
 import { EMPTY_STRING, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
-import TicketLocationFields from "../components/TicketLocationFields";
+import ExternalReporterFields from "../components/ExternalReporterFields";
+import {
+  clearExternalReporterFields,
+  externalReporterValidationErrorIds,
+  isExternalReporterType,
+  isKnownRegistryReporterType,
+} from "../utils/externalReporter";
+import { descriptionValidationErrorId } from "../utils/descriptionValidation";
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -56,10 +73,13 @@ class AddTicketPage extends Component {
       selectedCategory: null,
       selectedType: null,
       attachmentErrors: [],
+      validationErrors: [],
+      descriptionValidationError: null,
       stateEdited: {
         flags: "Investigation", // ['Investigation', 'Risk', 'Administrative', 'Priority', 'Social Protection Context']
         channel: "Web",
         priority: "Low",
+        consentGiven: false,
       },
     };
     this.previewUrls = new Map();
@@ -67,15 +87,11 @@ class AddTicketPage extends Component {
 
   componentDidMount() {
     this.syncPreviewUrls(this.props.pendingAttachments);
-    this.applyLocationScope();
   }
 
   componentDidUpdate(prevProps) {
     if (prevProps.pendingAttachments !== this.props.pendingAttachments) {
       this.syncPreviewUrls(this.props.pendingAttachments);
-    }
-    if (prevProps.grievanceLocationScope !== this.props.grievanceLocationScope) {
-      this.applyLocationScope();
     }
   }
 
@@ -109,6 +125,14 @@ class AddTicketPage extends Component {
 
   save = () => {
     const payload = this.buildTicketPayload();
+    const validationErrors = isExternalReporterType(payload.reporterType)
+      ? externalReporterValidationErrorIds(payload)
+      : [];
+    const descriptionValidationError = descriptionValidationErrorId(payload.description);
+    if (validationErrors.length > 0 || descriptionValidationError) {
+      this.setState({ validationErrors, descriptionValidationError });
+      return;
+    }
     this.props.createTicket(
       payload,
       this.props.grievanceConfig,
@@ -120,7 +144,12 @@ class AddTicketPage extends Component {
   updateAttribute = (k, v) => {
     this.setState((state) => {
       const updatedState = { ...state.stateEdited, [k]: v };
-      return { isSaved: false, stateEdited: updatedState };
+      return {
+        isSaved: false,
+        validationErrors: [],
+        descriptionValidationError: k === "description" ? null : state.descriptionValidationError,
+        stateEdited: updatedState,
+      };
     });
   };
 
@@ -158,9 +187,23 @@ class AddTicketPage extends Component {
   };
 
   updateTypeOfGrievant = (field, value) => {
-    this.updateAttribute("reporter", null);
-    this.updateAttribute("reporterType", value);
-    this.setState((state) => ({ grievantType: value }));
+    this.setState((state) => {
+      const reporterType = value || null;
+      const nextTicket = {
+        ...state.stateEdited,
+        reporter: null,
+        reporterType,
+      };
+      return {
+        isSaved: false,
+        validationErrors: [],
+        benefitPlan: null,
+        grievantType: reporterType,
+        stateEdited: isExternalReporterType(reporterType)
+          ? nextTicket
+          : clearExternalReporterFields(nextTicket),
+      };
+    });
   };
 
   updateBenefitPlan = (field, value) => {
@@ -168,30 +211,12 @@ class AddTicketPage extends Component {
     this.setState((state) => ({ benefitPlan: value }));
   };
 
-  applyLocationScope = () => {
-    const scope = this.props.grievanceLocationScope;
-    if (!scope?.assignedLocation || this.state.stateEdited.eventLocation) return;
-    this.setState((state) => ({
+  updateExternalReporter = (ticket) => {
+    this.setState({
       isSaved: false,
-      stateEdited: {
-        ...state.stateEdited,
-        region: scope.region ?? null,
-        district: scope.district ?? null,
-        ward: scope.ward ?? null,
-        village: scope.village ?? null,
-        eventLocation: scope.assignedLocation,
-      },
-    }));
-  };
-
-  updateLocation = (location) => {
-    this.setState((state) => ({
-      isSaved: false,
-      stateEdited: {
-        ...state.stateEdited,
-        ...location,
-      },
-    }));
+      validationErrors: [],
+      stateEdited: ticket,
+    });
   };
 
   handleSelectFiles = (event) => {
@@ -260,6 +285,8 @@ class AddTicketPage extends Component {
       isSaved,
       selectedCategory,
       selectedType,
+      validationErrors,
+      descriptionValidationError,
     } = this.state;
     pendingAttachments.forEach((file) => this.ensurePreviewUrl(file));
 
@@ -348,6 +375,14 @@ class AddTicketPage extends Component {
                       readOnly={isSaved}
                     />
                   </Grid>
+                )}
+                {isExternalReporterType(grievantType) && (
+                  <ExternalReporterFields
+                    value={stateEdited}
+                    onChange={this.updateExternalReporter}
+                    readOnly={isSaved}
+                    errors={validationErrors}
+                  />
                 )}
               </Grid>
 
@@ -595,30 +630,30 @@ class AddTicketPage extends Component {
                   <Alert severity="info" className={classes.descriptionHelperAlert}>
                     <FormattedMessage module={MODULE_NAME} id="ticket.description.helperText" />
                   </Alert>
+                  {descriptionValidationError && (
+                    <Alert severity="error" className={classes.descriptionHelperAlert}>
+                      <FormattedMessage module={MODULE_NAME} id={descriptionValidationError} />
+                    </Alert>
+                  )}
                 </Grid>
 
                 <Grid item xs={12} className={classes.item}>
-                  <Typography variant="subtitle2">
-                    <FormattedMessage module={MODULE_NAME} id="ticket.location.title" />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        color="primary"
+                        checked={!!stateEdited.consentGiven}
+                        disabled={isSaved}
+                        onChange={(event) =>
+                          this.updateAttribute("consentGiven", event.target.checked)
+                        }
+                      />
+                    }
+                    label={<FormattedMessage module={MODULE_NAME} id="ticket.consent.label" />}
+                  />
+                  <Typography variant="body2" color="textSecondary">
+                    <FormattedMessage module={MODULE_NAME} id="ticket.consent.message" />
                   </Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    <FormattedMessage
-                      module={MODULE_NAME}
-                      id={
-                        this.props.grievanceLocationScope?.required
-                          ? "ticket.location.requiredHelp"
-                          : "ticket.location.optionalHelp"
-                      }
-                    />
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <TicketLocationFields
-                      value={stateEdited}
-                      onChange={this.updateLocation}
-                      readOnly={isSaved}
-                      scope={this.props.grievanceLocationScope}
-                    />
-                  </Grid>
                 </Grid>
 
                 <Grid item xs={12} className={classes.item}>
@@ -680,12 +715,8 @@ class AddTicketPage extends Component {
                       !stateEdited.title ||
                       (this.isPaymentCategory() &&
                         (!this.state.paymentWindow || !this.state.paymentYear)) ||
-                      (this.props.grievanceLocationScope?.required &&
-                        !stateEdited.eventLocation) ||
                       isSaved ||
-                      ((stateEdited.reporterType === "individual" ||
-                        stateEdited.reporterType === "beneficiary" ||
-                        stateEdited.reporterType === "user") &&
+                      (isKnownRegistryReporterType(stateEdited.reporterType) &&
                         stateEdited.reporter === null)
                     }
                   >
@@ -707,7 +738,6 @@ function mapStateToProps(state, props) {
     submittingMutation: state.grievanceSocialProtection.submittingMutation,
     mutation: state.grievanceSocialProtection.mutation,
     grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
-    grievanceLocationScope: state.grievanceSocialProtection.grievanceLocationScope,
     pendingAttachments: state.grievanceSocialProtection.pendingAttachments,
   };
 }

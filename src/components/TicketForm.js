@@ -14,11 +14,17 @@ import { bindActionCreators } from 'redux';
 import {
   clearTicket,
   clearPendingAttachments,
-  fetchComments, fetchGrievanceConfiguration, fetchGrievanceLocationScope,
+  fetchComments, fetchGrievanceConfiguration,
   fetchTicket, reopenTicket,
   uploadTicketAttachments,
 } from '../actions';
 import { ticketLabel } from '../utils/utils';
+import {
+  externalReporterValidationErrorIds,
+  getReporterType,
+  isExternalReporterType,
+  isKnownRegistryReporterType,
+} from '../utils/externalReporter';
 import EditTicketPage from '../pages/EditTicketPage';
 import AddTicketPage from '../pages/AddTicketPage';
 import TicketCommentPanel from './TicketCommentsPanel';
@@ -38,7 +44,6 @@ class TicketForm extends Component {
 
   componentDidMount() {
     this.props.fetchGrievanceConfiguration();
-    this.props.fetchGrievanceLocationScope();
     if (this.props.ticketUuid) {
       this.setState((state, props) => ({ ticketUuid: props.ticketUuid }));
     }
@@ -136,9 +141,14 @@ class TicketForm extends Component {
   };
 
   canSave = () => {
-    if (!this.state.ticket.reporter) return false;
-    if (!this.state.ticket.category) return false;
-    if (!this.state.ticket.title) return false;
+    const { ticket } = this.state;
+    if (!ticket.category) return false;
+    if (!ticket.title) return false;
+    const reporterType = getReporterType(ticket);
+    if (isExternalReporterType(reporterType)) {
+      return externalReporterValidationErrorIds(ticket).length === 0;
+    }
+    if (isKnownRegistryReporterType(reporterType) && !ticket.reporter) return false;
     return true;
   };
 
@@ -236,7 +246,6 @@ const mapDispatchToProps = (dispatch) => bindActionCreators({
   fetchComments,
   reopenTicket,
   fetchGrievanceConfiguration,
-  fetchGrievanceLocationScope,
   uploadTicketAttachments,
   clearPendingAttachments,
   clearTicket,

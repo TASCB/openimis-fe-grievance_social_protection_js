@@ -10,7 +10,8 @@ import { makeStyles } from '@material-ui/styles';
 import {
   useTranslations, useModulesManager,
 } from '@openimis/fe-core';
-import { MODULE_NAME } from '../constants';
+import { EMPTY_STRING, MODULE_NAME } from '../constants';
+import { isExternalReporterType } from '../utils/externalReporter';
 
 const useStyles = makeStyles(() => ({
   topHeader: {
@@ -74,6 +75,13 @@ const TicketPrintTemplate = forwardRef(({ ticket, reporter }, ref) => {
   const classes = useStyles();
   const modulesManager = useModulesManager();
   const { formatMessage } = useTranslations(modulesManager, MODULE_NAME);
+  const reporterType = ticket.reporterTypeName ?? ticket.reporterType;
+  const externalReporterLocation = [
+    ticket.externalReporterRegion?.name,
+    ticket.externalReporterDistrict?.name,
+    ticket.externalReporterWard?.name,
+    ticket.externalReporterVillage?.name,
+  ].filter(Boolean).join(' / ');
 
   return (
     <div ref={ref} className={classes.containerPadding}>
@@ -116,6 +124,12 @@ const TicketPrintTemplate = forwardRef(({ ticket, reporter }, ref) => {
           <p className={classes.detailName}>{formatMessage('ticket.template.description')}</p>
           <p className={classes.detailValue}>{ticket.description}</p>
         </div>
+        <div className={classes.detailRow}>
+          <p className={classes.detailName}>{formatMessage('ticket.consentGiven')}</p>
+          <p className={classes.detailValue}>
+            {ticket.consentGiven ? formatMessage('ticket.consent.yes') : formatMessage('ticket.consent.no')}
+          </p>
+        </div>
         {ticket.reporterTypeName === 'individual' && (
         <div className={classes.detailRow}>
           <p className={classes.detailName}>{formatMessage('ticket.template.reporter')}</p>
@@ -127,6 +141,36 @@ const TicketPrintTemplate = forwardRef(({ ticket, reporter }, ref) => {
                 : EMPTY_STRING}
           </p>
         </div>
+        )}
+        {isExternalReporterType(reporterType) && (
+        <>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('grievantType')}</p>
+            <p className={classes.detailValue}>{formatMessage('grievantType.external')}</p>
+          </div>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.externalReporter.firstName')}</p>
+            <p className={classes.detailValue}>{ticket.externalReporterFirstName}</p>
+          </div>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.externalReporter.lastName')}</p>
+            <p className={classes.detailValue}>{ticket.externalReporterLastName}</p>
+          </div>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.externalReporter.phone')}</p>
+            <p className={classes.detailValue}>{ticket.externalReporterPhone}</p>
+          </div>
+          {!!ticket.externalReporterEmail && (
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.externalReporter.email')}</p>
+            <p className={classes.detailValue}>{ticket.externalReporterEmail}</p>
+          </div>
+          )}
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.externalReporter.locationTitle')}</p>
+            <p className={classes.detailValue}>{externalReporterLocation}</p>
+          </div>
+        </>
         )}
         {ticket.reporterTypeName === 'beneficiary' && (
         <div className={classes.detailRow}>

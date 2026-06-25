@@ -14,6 +14,11 @@ import { ACTION_TYPE } from "./reducer";
 import { FETCH_INDIVIDUAL_REF } from "./constants";
 import { isBase64Encoded } from "./utils/utils";
 import { CLEAR, ERROR, REQUEST, SUCCESS } from "./utils/action-type";
+import {
+  getReporterType,
+  isExternalReporterType,
+  parseSerializedReporter,
+} from "./utils/externalReporter";
 
 const GRIEVANCE_CONFIGURATION_PROJECTION = () => [
   "grievanceTypes",
@@ -67,6 +72,17 @@ const GRIEVANCE_TYPE_PROJECTION = () => [
 const GRIEVANCE_CATEGORY_PROJECTION = () => ["id", "code", "name", "timeline", "isActive"];
 const GRIEVANCE_CHANNEL_PROJECTION = () => ["id", "code", "name", "isActive"];
 const LOCATION_PROJECTION = "id uuid code name type";
+const EXTERNAL_REPORTER_PROJECTION = () => [
+  "externalReporterFirstName",
+  "externalReporterLastName",
+  "externalReporterPhone",
+  "externalReporterEmail",
+  `externalReporterLocation{${LOCATION_PROJECTION}}`,
+  `externalReporterRegion{${LOCATION_PROJECTION}}`,
+  `externalReporterDistrict{${LOCATION_PROJECTION}}`,
+  `externalReporterWard{${LOCATION_PROJECTION}}`,
+  `externalReporterVillage{${LOCATION_PROJECTION}}`,
+];
 
 function formatIdGQL(id) {
   if (!id) return id;
@@ -159,6 +175,7 @@ export function fetchTicketSummaries(mm, filters) {
     "category",
     "flags",
     "channel",
+    "consentGiven",
     "resolution",
     "title",
     "dateOfIncident",
@@ -173,6 +190,7 @@ export function fetchTicketSummaries(mm, filters) {
     `district{${LOCATION_PROJECTION}}`,
     `ward{${LOCATION_PROJECTION}}`,
     `village{${LOCATION_PROJECTION}}`,
+    ...EXTERNAL_REPORTER_PROJECTION(),
   ];
   const payload = formatPageQueryWithCount("tickets", filters, projections);
   return graphql(payload, "TICKET_TICKETS");
@@ -212,6 +230,7 @@ export function fetchTicket(mm, filters) {
     "category",
     "flags",
     "channel",
+    "consentGiven",
     "resolution",
     "title",
     "dateOfIncident",
@@ -228,6 +247,7 @@ export function fetchTicket(mm, filters) {
     `district{${LOCATION_PROJECTION}}`,
     `ward{${LOCATION_PROJECTION}}`,
     `village{${LOCATION_PROJECTION}}`,
+    ...EXTERNAL_REPORTER_PROJECTION(),
   ];
   const payload = formatPageQueryWithCount("tickets", filters, projections);
   return graphql(payload, "TICKET_TICKET");
@@ -280,14 +300,82 @@ function locationId(location) {
   return isBase64Encoded(location.id) ? decodeId(location.id) : location.id;
 }
 
+function formatOptionalStringGQL(fieldName, value, includeBlank = false) {
+  if (value === undefined || value === null) return "";
+  const stringValue = `${value}`;
+  if (stringValue === "" && !includeBlank) return "";
+  return `${fieldName}: "${formatGQLString(stringValue)}"`;
+}
+
+function formatOptionalIdGQL(fieldName, id) {
+  if (id === undefined || id === null || id === "") return "";
+  return `${fieldName}: ${id}`;
+}
+
+function formatReporterGQL(ticket, includeNullReporterType = false) {
+  const reporter = parseSerializedReporter(ticket.reporter);
+  const reporterType = getReporterType(ticket);
+  const hasReporterType = reporterType !== undefined && reporterType !== null && reporterType !== "";
+  const shouldClearReporterType =
+    includeNullReporterType || Object.prototype.hasOwnProperty.call(ticket, "reporterType");
+
+  return `
+    ${
+      reporter
+        ? isBase64Encoded(reporter.id)
+          ? `reporterId: "${formatGQLString(decodeId(reporter.id))}"`
+          : `reporterId: "${formatGQLString(reporter.id)}"`
+        : ""
+    }
+    ${
+      hasReporterType
+        ? `reporterType: "${formatGQLString(reporterType)}"`
+        : shouldClearReporterType
+          ? 'reporterType: ""'
+          : ""
+    }
+  `;
+}
+
 function formatLocationGQL(ticket) {
   return `
-    regionId: ${locationId(ticket.region) ?? "null"}
-    districtId: ${locationId(ticket.district) ?? "null"}
-    wardId: ${locationId(ticket.ward) ?? "null"}
-    villageId: ${locationId(ticket.village) ?? "null"}
-    eventLocationId: ${locationId(ticket.eventLocation) ?? "null"}
+    ${formatOptionalIdGQL("regionId", locationId(ticket.region))}
+    ${formatOptionalIdGQL("districtId", locationId(ticket.district))}
+    ${formatOptionalIdGQL("wardId", locationId(ticket.ward))}
+    ${formatOptionalIdGQL("villageId", locationId(ticket.village))}
+    ${formatOptionalIdGQL("eventLocationId", locationId(ticket.eventLocation))}
   `;
+}
+
+function formatExternalReporterLocationGQL(ticket) {
+  return `
+    ${formatOptionalIdGQL("externalReporterRegionId", locationId(ticket.externalReporterRegion))}
+    ${formatOptionalIdGQL("externalReporterDistrictId", locationId(ticket.externalReporterDistrict))}
+    ${formatOptionalIdGQL("externalReporterWardId", locationId(ticket.externalReporterWard))}
+    ${formatOptionalIdGQL("externalReporterVillageId", locationId(ticket.externalReporterVillage))}
+    ${formatOptionalIdGQL("externalReporterLocationId", locationId(ticket.externalReporterLocation))}
+  `;
+}
+
+function formatExternalReporterGQL(ticket) {
+  const reporterType = getReporterType(ticket);
+  if (!isExternalReporterType(reporterType)) {
+    return "";
+  }
+  return `
+    ${formatOptionalStringGQL("externalReporterFirstName", ticket.externalReporterFirstName)}
+    ${formatOptionalStringGQL("externalReporterLastName", ticket.externalReporterLastName)}
+    ${formatOptionalStringGQL("externalReporterPhone", ticket.externalReporterPhone)}
+    ${formatOptionalStringGQL("externalReporterEmail", ticket.externalReporterEmail, true)}
+    ${formatExternalReporterLocationGQL(ticket)}
+  `;
+}
+
+function formatConsentGQL(ticket, includeDefault = false) {
+  if (typeof ticket.consentGiven === "boolean") {
+    return `consentGiven: ${ticket.consentGiven}`;
+  }
+  return includeDefault ? "consentGiven: false" : "";
 }
 
 export function formatTicketGQL(ticket) {
@@ -297,15 +385,9 @@ export function formatTicketGQL(ticket) {
     ${!!ticket.category && !!ticket.category ? `category: "${ticket.category}"` : ""}
     ${!!ticket.title && !!ticket.title ? `title: "${ticket.title}"` : ""}
     ${!!ticket.attendingStaff && !!ticket.attendingStaff ? `attendingStaffId: "${decodeId(ticket.attendingStaff.id)}"` : ""}
-    ${!!ticket.description && !!ticket.description ? `description: "${ticket.description}"` : ""}
-    ${
-      ticket.reporter
-        ? isBase64Encoded(ticket.reporter.id)
-          ? `reporterId: "${decodeId(ticket.reporter.id)}"`
-          : `reporterId: "${ticket.reporter.id}"`
-        : ""
-    }
-    ${!!ticket.reporterType && !!ticket.reporterType ? `reporterType: "${ticket.reporterType}"` : ""}
+    ${!!ticket.description && !!ticket.description ? `description: "${formatGQLString(ticket.description)}"` : ""}
+    ${formatReporterGQL(ticket)}
+    ${formatExternalReporterGQL(ticket)}
     ${ticket.nameOfComplainant ? `nameOfComplainant: "${formatGQLString(ticket.nameOfComplainant)}"` : ""}
     ${ticket.resolution ? `resolution: "${formatGQLString(ticket.resolution)}"` : ""}
     ${ticket.status ? `status: "${formatGQLString(ticket.status)}"` : ""}
@@ -315,28 +397,20 @@ export function formatTicketGQL(ticket) {
     ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
+    ${formatConsentGQL(ticket, true)}
     ${formatJsonExtGQL(ticket.jsonExt)}
     ${formatLocationGQL(ticket)}
   `;
 }
 
 export function formatUpdateTicketGQL(ticket) {
-  // eslint-disable-next-line no-param-reassign
-  if (ticket.reporter) ticket.reporter = JSON.parse(JSON.parse(ticket.reporter || "{}"), "{}");
   return `
     ${ticket.id !== undefined && ticket.id !== null ? `id: "${ticket.id}"` : ""}
     ${!!ticket.category && !!ticket.category ? `category: "${ticket.category}"` : ""}
     ${!!ticket.title && !!ticket.title ? `title: "${ticket.title}"` : ""}
-    ${!!ticket.description && !!ticket.description ? `description: "${ticket.description}"` : ""}
     ${!!ticket.attendingStaff && !!ticket.attendingStaff ? `attendingStaffId: "${decodeId(ticket.attendingStaff.id)}"` : ""}
-    ${
-      ticket.reporter
-        ? isBase64Encoded(ticket.reporter.id)
-          ? `reporterId: "${decodeId(ticket.reporter.id)}"`
-          : `reporterId: "${ticket.reporter.id}"`
-        : ""
-    }
-    ${!!ticket.reporter && !!ticket.reporter ? `reporterType: "${ticket.reporterTypeName}"` : ""}
+    ${formatReporterGQL(ticket, true)}
+    ${formatExternalReporterGQL(ticket)}
     ${ticket.nameOfComplainant ? `nameOfComplainant: "${formatGQLString(ticket.nameOfComplainant)}"` : ""}
     ${ticket.resolution ? `resolution: "${formatGQLString(ticket.resolution)}"` : ""}
     ${ticket.status ? `status: ${formatGQLString(ticket.status)}` : ""}
@@ -346,6 +420,7 @@ export function formatUpdateTicketGQL(ticket) {
     ${ticket.dateOfIncident ? `dateOfIncident: "${formatGQLString(ticket.dateOfIncident)}"` : ""}
     ${!!ticket.channel && !!ticket.channel ? `channel: "${ticket.channel}"` : ""}
     ${!!ticket.flags && !!ticket.flags ? `flags: "${ticket.flags}"` : ""}
+    ${formatConsentGQL(ticket)}
     ${formatLocationGQL(ticket)}
   `;
 }
@@ -355,7 +430,6 @@ export function formatCloseTicketGQL(ticket, closingComment, commenter, commente
     ${ticket.id !== undefined && ticket.id !== null ? `id: "${ticket.id}"` : ""}
     ${!!ticket.category && !!ticket.category ? `category: "${ticket.category}"` : ""}
     ${!!ticket.title && !!ticket.title ? `title: "${formatGQLString(ticket.title)}"` : ""}
-    ${!!ticket.description && !!ticket.description ? `description: "${formatGQLString(ticket.description)}"` : ""}
     ${!!ticket.attendingStaff && !!ticket.attendingStaff ? `attendingStaffId: "${decodeId(ticket.attendingStaff.id)}"` : ""}
     ${ticket.resolution ? `resolution: "${formatGQLString(ticket.resolution)}"` : ""}
     ${ticket.priority ? `priority: "${formatGQLString(ticket.priority)}"` : ""}

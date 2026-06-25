@@ -41,7 +41,15 @@ import {
   TICKET_STATUSES,
 } from '../constants';
 import TicketPrintTemplate from '../components/TicketPrintTemplate';
-import TicketLocationFields from '../components/TicketLocationFields';
+import GrievantTypePicker from '../pickers/GrievantTypePicker';
+import ExternalReporterFields from '../components/ExternalReporterFields';
+import {
+  clearExternalReporterFields,
+  externalReporterValidationErrorIds,
+  getReporterType,
+  isExternalReporterType,
+  parseSerializedReporter,
+} from '../utils/externalReporter';
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -71,7 +79,9 @@ class EditTicketPage extends Component {
       stateEdited: props.ticket,
       comments: props.comments,
       reporter: {},
+      benefitPlan: null,
       grievanceConfig: {},
+      validationErrors: [],
       closingDialogOpen: false,
       closingComment: EMPTY_STRING,
     };
@@ -82,7 +92,7 @@ class EditTicketPage extends Component {
       this.setState({ grievanceConfig: this.props.grievanceConfig });
       this.setState({ stateEdited: this.props.ticket });
       if (this.props.ticket.reporter) {
-        this.setState({ reporter: JSON.parse(JSON.parse(this.props.ticket.reporter || '{}'), '{}') });
+        this.setState({ reporter: parseSerializedReporter(this.props.ticket.reporter) ?? {} });
       }
     }
   }
@@ -132,6 +142,13 @@ class EditTicketPage extends Component {
   };
 
   save = () => {
+    const validationErrors = isExternalReporterType(getReporterType(this.state.stateEdited))
+      ? externalReporterValidationErrorIds(this.state.stateEdited)
+      : [];
+    if (validationErrors.length > 0) {
+      this.setState({ validationErrors });
+      return;
+    }
     if (this.isClosingTransition()) {
       if (!this.canCloseTicket()) return;
       this.setState({ closingDialogOpen: true, closingComment: EMPTY_STRING });
@@ -162,17 +179,42 @@ class EditTicketPage extends Component {
 
   updateAttribute = (k, v) => {
     this.setState((state) => ({
+      validationErrors: [],
       stateEdited: { ...state.stateEdited, [k]: v },
     }));
   };
 
-  updateLocation = (location) => {
-    this.setState((state) => ({
-      stateEdited: {
+  updateTypeOfGrievant = (field, value) => {
+    this.setState((state) => {
+      const reporterType = value || null;
+      const nextTicket = {
         ...state.stateEdited,
-        ...location,
-      },
-    }));
+        reporter: null,
+        reporterId: null,
+        reporterType,
+        reporterTypeName: reporterType,
+      };
+      return {
+        validationErrors: [],
+        benefitPlan: null,
+        reporter: {},
+        stateEdited: isExternalReporterType(reporterType)
+          ? nextTicket
+          : clearExternalReporterFields(nextTicket),
+      };
+    });
+  };
+
+  updateBenefitPlan = (field, value) => {
+    this.updateAttribute('reporter', null);
+    this.setState({ benefitPlan: value });
+  };
+
+  updateExternalReporter = (ticket) => {
+    this.setState({
+      validationErrors: [],
+      stateEdited: ticket,
+    });
   };
 
   extractFieldFromJsonExt = (reporter, field) => {
@@ -222,15 +264,18 @@ class EditTicketPage extends Component {
     const propsReadOnly = this.props.readOnly;
 
     const {
-      stateEdited, reporter, comments,
+      stateEdited, reporter, comments, benefitPlan, validationErrors,
     } = this.state;
+    const reporterType = getReporterType(stateEdited);
+    const reporterPickerValue = typeof stateEdited.reporter === 'string'
+      ? reporter
+      : stateEdited.reporter || reporter;
     const ticketJsonExt = this.getTicketJsonExt();
     const paymentWindowLabel = this.getPaymentWindowLabel();
     return (
       <div className={classes.page}>
         <Grid container>
           <Grid item xs={12}>
-            {stateEdited.reporter && (
             <Paper className={classes.paper}>
               <Grid container className={classes.tableTitle}>
                 <Grid item xs={8} className={classes.tableTitle}>
@@ -240,21 +285,100 @@ class EditTicketPage extends Component {
                 </Grid>
               </Grid>
               <Grid container className={classes.item}>
-                {stateEdited.reporterTypeName === 'individual' && (
-                <Grid item xs={3} className={classes.item}>
-                  <PublishedComponent
-                    pubRef="individual.IndividualPicker"
-                    value={reporter}
-                    onChange={(v) => this.updateAttribute('reporter', v)}
-                    label="Complainant"
-                    readOnly
+                <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                  <GrievantTypePicker
+                    module={MODULE_NAME}
+                    label="type"
+                    readOnly={propsReadOnly}
+                    withNull
+                    value={(reporterType ?? '').toString().replace(/\s+/g, '')}
+                    onChange={(v) => this.updateTypeOfGrievant('grievantType', v)}
+                    withLabel
                   />
                 </Grid>
+                {reporterType === 'individual' && (
+                <>
+                  {!propsReadOnly && (
+                  <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                    <PublishedComponent
+                      pubRef="socialProtection.BenefitPlanPicker"
+                      withNull
+                      label="socialProtection.benefitPlan"
+                      value={benefitPlan}
+                      onChange={(v) => this.updateBenefitPlan('benefitPlan', v)}
+                      readOnly={propsReadOnly}
+                    />
+                  </Grid>
+                  )}
+                  <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                    <PublishedComponent
+                      pubRef="individual.IndividualPicker"
+                      value={reporterPickerValue}
+                      onChange={(v) => this.updateAttribute('reporter', v)}
+                      label="Complainant"
+                      benefitPlan={benefitPlan}
+                      readOnly={propsReadOnly}
+                    />
+                  </Grid>
+                </>
+                )}
+                {reporterType === 'beneficiary' && (
+                <>
+                  {!propsReadOnly && (
+                  <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                    <PublishedComponent
+                      pubRef="socialProtection.BenefitPlanPicker"
+                      withNull
+                      label="socialProtection.benefitPlan"
+                      value={benefitPlan}
+                      onChange={(v) => this.updateBenefitPlan('benefitPlan', v)}
+                      readOnly={propsReadOnly}
+                    />
+                  </Grid>
+                  )}
+                  {(benefitPlan || propsReadOnly) && (
+                  <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                    <PublishedComponent
+                      pubRef="socialProtection.BeneficiaryPicker"
+                      onChange={(v) => this.updateAttribute('reporter', v)}
+                      readOnly={propsReadOnly}
+                      value={propsReadOnly ? {
+                        individual: {
+                          firstName: stateEdited.reporterFirstName,
+                          lastName: stateEdited.reporterLastName,
+                          dob: stateEdited.reporterDob,
+                        },
+                      } : stateEdited.reporter}
+                      benefitPlan={benefitPlan}
+                      module={MODULE_NAME}
+                    />
+                  </Grid>
+                  )}
+                </>
+                )}
+                {reporterType === 'user' && (
+                <Grid item xs={12} sm={6} md={3} className={classes.item}>
+                  <PublishedComponent
+                    pubRef="admin.UserPicker"
+                    value={reporterPickerValue}
+                    module="core"
+                    onChange={(v) => this.updateAttribute('reporter', v)}
+                    readOnly={propsReadOnly}
+                  />
+                </Grid>
+                )}
+                {isExternalReporterType(reporterType) && (
+                <ExternalReporterFields
+                  value={stateEdited}
+                  onChange={this.updateExternalReporter}
+                  readOnly={propsReadOnly}
+                  errors={validationErrors}
+                />
                 )}
               </Grid>
               <Divider />
               <Grid container className={classes.item}>
-                {stateEdited.reporterTypeName === 'individual' && (
+                {reporterType === 'individual' && (
                 <>
                   <Grid item xs={4} className={classes.item}>
                     <TextInput
@@ -296,7 +420,7 @@ class EditTicketPage extends Component {
                   </Grid>
                 </>
                 )}
-                {stateEdited.reporterTypeName === 'beneficiary' && (
+                {reporterType === 'beneficiary' && propsReadOnly && (
                 <PublishedComponent
                   pubRef="socialProtection.BeneficiaryPicker"
                   onChange={(v) => this.updateAttribute('reporter', v)}
@@ -313,20 +437,8 @@ class EditTicketPage extends Component {
                   module={MODULE_NAME}
                 />
                 )}
-                {stateEdited.reporterTypeName === 'user' && (
-                <Grid item xs={6} className={classes.item}>
-                  <PublishedComponent
-                    pubRef="admin.UserPicker"
-                    value={reporter}
-                    module="core"
-                    onChange={(v) => this.updateAttribute('reporter', v)}
-                    readOnly
-                  />
-                </Grid>
-                )}
               </Grid>
             </Paper>
-            )}
           </Grid>
         </Grid>
 
@@ -453,18 +565,18 @@ class EditTicketPage extends Component {
                     readOnly={propsReadOnly}
                   />
                 </Grid>
-                <Grid item xs={12} className={classes.item}>
-                  <Typography variant="subtitle2">
-                    <FormattedMessage module={MODULE_NAME} id="ticket.location.title" />
+                <Grid item xs={6} className={classes.item}>
+                  <TextInput
+                    module={MODULE_NAME}
+                    label="ticket.consentGiven"
+                    value={stateEdited.consentGiven ? 'Yes' : 'No'}
+                    onChange={() => null}
+                    required={false}
+                    readOnly
+                  />
+                  <Typography variant="caption" color="textSecondary">
+                    <FormattedMessage module={MODULE_NAME} id="ticket.consent.message" />
                   </Typography>
-                  <Grid container spacing={2}>
-                    <TicketLocationFields
-                      value={stateEdited}
-                      onChange={this.updateLocation}
-                      readOnly={propsReadOnly}
-                      scope={this.props.grievanceLocationScope}
-                    />
-                  </Grid>
                 </Grid>
                 <Grid item xs={12} className={classes.item}>
                   <TextInput
@@ -472,7 +584,7 @@ class EditTicketPage extends Component {
                     value={stateEdited.description}
                     onChange={(v) => this.updateAttribute('description', v)}
                     required={false}
-                    readOnly={propsReadOnly}
+                    readOnly
                   />
                   <Alert severity="info" className={classes.descriptionHelperAlert}>
                     <FormattedMessage module={MODULE_NAME} id="ticket.description.helperText" />
@@ -594,7 +706,6 @@ const mapStateToProps = (state, props) => ({
   comments: state.grievanceSocialProtection.ticketComments,
   user: state.core?.user ?? null,
   rights: state.core?.user?.i_user?.rights ?? [],
-  grievanceLocationScope: state.grievanceSocialProtection.grievanceLocationScope,
 });
 
 const mapDispatchToProps = (dispatch) => bindActionCreators(

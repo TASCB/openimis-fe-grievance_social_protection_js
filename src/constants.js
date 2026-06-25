@@ -28,7 +28,8 @@ export const MODULE_NAME = "grievanceSocialProtection";
 export const FETCH_INDIVIDUAL_REF = "individual.actions.fetchIndividuals";
 
 export const EMPTY_STRING = "";
-export const GRIEVANT_TYPE_LIST = ["individual", "beneficiary", "user"];
+export const EXTERNAL_REPORTER_TYPE = "external";
+export const GRIEVANT_TYPE_LIST = ["individual", "beneficiary", "user", EXTERNAL_REPORTER_TYPE];
 export const GRIEVANCE_MAIN_MENU_CONTRIBUTION_KEY = "grievance.MainMenu";
 
 export const GRIEVANCE_REPORT_TYPES = {

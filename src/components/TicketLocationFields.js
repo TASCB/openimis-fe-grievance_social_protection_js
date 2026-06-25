@@ -6,10 +6,10 @@ import { MODULE_NAME } from "../constants";
 import GrievanceLocationPicker from "../pickers/GrievanceLocationPicker";
 
 const LEVELS = [
-  { key: "region", level: 0, label: "ticket.location.region", type: "R" },
-  { key: "district", level: 1, label: "ticket.location.district", type: "D" },
-  { key: "ward", level: 2, label: "ticket.location.ward", type: "W" },
-  { key: "village", level: 3, label: "ticket.location.village", type: "V" },
+  { role: "region", key: "region", label: "ticket.location.region", type: "R" },
+  { role: "district", key: "district", label: "ticket.location.district", type: "D" },
+  { role: "ward", key: "ward", label: "ticket.location.ward", type: "W" },
+  { role: "village", key: "village", label: "ticket.location.village", type: "V" },
 ];
 
 const locationIndex = (location) => (
@@ -22,16 +22,30 @@ const TicketLocationFields = ({
   readOnly = false,
   scope = null,
   intl,
+  required = false,
+  fieldNames = {},
 }) => {
   const assignedLevel = locationIndex(scope?.assignedLocation);
+  const fields = {
+    region: "region",
+    district: "district",
+    ward: "ward",
+    village: "village",
+    eventLocation: "eventLocation",
+    ...fieldNames,
+  };
+  const levels = LEVELS.map((level) => ({
+    ...level,
+    key: fields[level.role],
+  }));
 
   const updateLocation = (index, location) => {
     const next = { ...value };
-    LEVELS.forEach(({ key }, levelIndex) => {
+    levels.forEach(({ key }, levelIndex) => {
       if (levelIndex === index) next[key] = location;
       if (levelIndex > index) next[key] = null;
     });
-    next.eventLocation = [...LEVELS]
+    next[fields.eventLocation] = [...levels]
       .reverse()
       .map(({ key }) => next[key])
       .find(Boolean) ?? null;
@@ -40,18 +54,23 @@ const TicketLocationFields = ({
 
   return (
     <>
-      {LEVELS.map(({ key, label, type }, index) => (
-        <Grid item xs={3} key={key}>
-          <GrievanceLocationPicker
-            value={value[key] ?? null}
-            parentLocation={index > 0 ? value[LEVELS[index - 1].key] ?? null : null}
-            locationType={type}
-            label={formatMessage(intl, MODULE_NAME, label)}
-            readOnly={readOnly || (assignedLevel >= 0 && index <= assignedLevel)}
-            onChange={(location) => updateLocation(index, location)}
-          />
-        </Grid>
-      ))}
+      {levels.map(({ key, label, type }, index) => {
+        const parentLocation = index > 0 ? value[levels[index - 1].key] ?? null : null;
+        const parentMissing = index > 0 && !parentLocation;
+        return (
+          <Grid item xs={12} sm={6} md={3} key={key}>
+            <GrievanceLocationPicker
+              value={value[key] ?? null}
+              parentLocation={parentLocation}
+              locationType={type}
+              label={formatMessage(intl, MODULE_NAME, label)}
+              required={required}
+              readOnly={readOnly || parentMissing || (assignedLevel >= 0 && index <= assignedLevel)}
+              onChange={(location) => updateLocation(index, location)}
+            />
+          </Grid>
+        );
+      })}
     </>
   );
 };
