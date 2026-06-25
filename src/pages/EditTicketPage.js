@@ -561,6 +561,7 @@ class EditTicketPage extends Component {
                     pubRef="admin.UserPicker"
                     value={stateEdited.attendingStaff}
                     module="core"
+                    label="Assigned To/Attending Staff"
                     onChange={(v) => this.updateAttribute('attendingStaff', v)}
                     readOnly={propsReadOnly}
                   />

@@ -21,11 +21,12 @@ import {
 import { Save, CloudUpload } from "@material-ui/icons";
 import { TextInput, PublishedComponent, FormattedMessage, SelectInput } from "@openimis/fe-core";
 import {
-  createTicket, setPendingAttachments,
+  createTicket, fetchGrievanceLocationScope, setPendingAttachments,
 } from "../actions";
 import { EMPTY_STRING, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
 import ExternalReporterFields from "../components/ExternalReporterFields";
+import TicketLocationFields from "../components/TicketLocationFields";
 import {
   clearExternalReporterFields,
   externalReporterValidationErrorIds,
@@ -63,6 +64,37 @@ const styles = (theme) => ({
   },
 });
 
+const assignedLocationsOf = (scope) => scope?.assignedLocations ?? [];
+
+// When a location-restricted user is assigned to exactly one location, derive
+// the grievance location (and its Region/District/Ward/Village chain) from it.
+const singleAssignedLocationState = (scope) => {
+  if (!scope?.restricted) return null;
+  const locations = assignedLocationsOf(scope);
+  if (locations.length !== 1) return null;
+  return {
+    region: scope.region ?? null,
+    district: scope.district ?? null,
+    ward: scope.ward ?? null,
+    village: scope.village ?? null,
+    eventLocation: scope.assignedLocation ?? locations[0],
+  };
+};
+
+const sameLocation = (left, right) => (left?.id ?? null) === (right?.id ?? null);
+
+const sameLocationState = (ticket, next) => (
+  sameLocation(ticket.region, next.region)
+  && sameLocation(ticket.district, next.district)
+  && sameLocation(ticket.ward, next.ward)
+  && sameLocation(ticket.village, next.village)
+  && sameLocation(ticket.eventLocation, next.eventLocation)
+);
+
+const locationOptionLabel = (location) => location?.name
+  ?? location?.code
+  ?? "";
+
 class AddTicketPage extends Component {
   constructor(props) {
     super(props);
@@ -86,12 +118,17 @@ class AddTicketPage extends Component {
   }
 
   componentDidMount() {
+    this.props.fetchGrievanceLocationScope();
     this.syncPreviewUrls(this.props.pendingAttachments);
+    this.applyAutoLocation(this.props.grievanceLocationScope);
   }
 
   componentDidUpdate(prevProps) {
     if (prevProps.pendingAttachments !== this.props.pendingAttachments) {
       this.syncPreviewUrls(this.props.pendingAttachments);
+    }
+    if (prevProps.grievanceLocationScope !== this.props.grievanceLocationScope) {
+      this.applyAutoLocation(this.props.grievanceLocationScope);
     }
   }
 
@@ -219,6 +256,42 @@ class AddTicketPage extends Component {
     });
   };
 
+  // Auto-fill the grievance location from the creator's assigned location when
+  // they are assigned to exactly one.
+  applyAutoLocation = (scope) => {
+    const locationState = singleAssignedLocationState(scope);
+    if (!locationState) return;
+    this.setState((state) => {
+      if (sameLocationState(state.stateEdited, locationState)) return null;
+      return { stateEdited: { ...state.stateEdited, ...locationState } };
+    });
+  };
+
+  // Used when the creator has several assigned locations and must pick one.
+  updateAssignedLocationChoice = (locationGqlId) => {
+    const selected = assignedLocationsOf(this.props.grievanceLocationScope)
+      .find((location) => location.id === locationGqlId) ?? null;
+    this.setState((state) => ({
+      isSaved: false,
+      stateEdited: {
+        ...state.stateEdited,
+        region: null,
+        district: null,
+        ward: null,
+        village: null,
+        eventLocation: selected,
+      },
+    }));
+  };
+
+  // Used when the creator has no assigned location and optionally picks one.
+  updateLocation = (location) => {
+    this.setState((state) => ({
+      isSaved: false,
+      stateEdited: { ...state.stateEdited, ...location },
+    }));
+  };
+
   handleSelectFiles = (event) => {
     const picked = Array.from(event.target.files || []);
     event.target.value = "";
@@ -276,6 +349,7 @@ class AddTicketPage extends Component {
       titleone = " Ticket.ComplainantInformation",
       titletwo = " Ticket.DescriptionOfEvents",
       titleParams = { label: EMPTY_STRING },
+      grievanceLocationScope,
     } = this.props;
 
     const {
@@ -289,6 +363,14 @@ class AddTicketPage extends Component {
       descriptionValidationError,
     } = this.state;
     pendingAttachments.forEach((file) => this.ensurePreviewUrl(file));
+    // Only location-restricted users are constrained to their assigned locations.
+    // Unrestricted users (e.g. superusers) may optionally pick any location.
+    const locationRestricted = !!grievanceLocationScope?.restricted;
+    const assignedLocations = locationRestricted ? assignedLocationsOf(grievanceLocationScope) : [];
+    const mustChooseLocation = assignedLocations.length > 1;
+    const hasSingleAssignedLocation = assignedLocations.length === 1;
+    const hasNoAssignedLocation = assignedLocations.length === 0;
+    const locationChoiceMissing = mustChooseLocation && !stateEdited.eventLocation;
 
     return (
       <div className={classes.page}>
@@ -615,10 +697,66 @@ class AddTicketPage extends Component {
                     pubRef="admin.UserPicker"
                     value={stateEdited.attendingStaff}
                     module="core"
+                    label="Assigned To/Attending Staff"
                     onChange={(v) => this.updateAttribute("attendingStaff", v)}
                     readOnly={isSaved}
                   />
                 </Grid>
+
+                {hasSingleAssignedLocation && (
+                  <Grid item xs={6} className={classes.item}>
+                    <TextInput
+                      module={MODULE_NAME}
+                      label="ticket.location.assigned"
+                      value={locationOptionLabel(stateEdited.eventLocation)}
+                      onChange={() => {}}
+                      readOnly
+                    />
+                  </Grid>
+                )}
+
+                {mustChooseLocation && (
+                  <Grid item xs={6} className={classes.item}>
+                    <SelectInput
+                      module={MODULE_NAME}
+                      label="ticket.location.choose"
+                      value={stateEdited.eventLocation?.id ?? null}
+                      onChange={this.updateAssignedLocationChoice}
+                      options={[
+                        { value: null, label: "-" },
+                        ...assignedLocations.map((location) => ({
+                          value: location.id,
+                          label: locationOptionLabel(location),
+                        })),
+                      ]}
+                      required
+                      readOnly={isSaved}
+                    />
+                    {locationChoiceMissing && (
+                      <Alert severity="info" className={classes.descriptionHelperAlert}>
+                        <FormattedMessage module={MODULE_NAME} id="ticket.location.choose.help" />
+                      </Alert>
+                    )}
+                  </Grid>
+                )}
+
+                {hasNoAssignedLocation && (
+                  <>
+                    <TicketLocationFields
+                      value={stateEdited}
+                      onChange={this.updateLocation}
+                      readOnly={isSaved}
+                      required={false}
+                      gridItemClassName={classes.item}
+                    />
+                    <Grid item xs={12} className={classes.item}>
+                      <Alert severity="info" className={classes.descriptionHelperAlert}>
+                        <FormattedMessage module={MODULE_NAME} id="ticket.location.optionalHelp" />
+                      </Alert>
+                    </Grid>
+                  </>
+                )}
+
                 <Grid item xs={12} className={classes.item}>
                   <TextInput
                     label="ticket.ticketDescription"
@@ -715,6 +853,7 @@ class AddTicketPage extends Component {
                       !stateEdited.title ||
                       (this.isPaymentCategory() &&
                         (!this.state.paymentWindow || !this.state.paymentYear)) ||
+                      locationChoiceMissing ||
                       isSaved ||
                       (isKnownRegistryReporterType(stateEdited.reporterType) &&
                         stateEdited.reporter === null)
@@ -738,6 +877,7 @@ function mapStateToProps(state, props) {
     submittingMutation: state.grievanceSocialProtection.submittingMutation,
     mutation: state.grievanceSocialProtection.mutation,
     grievanceConfig: state.grievanceSocialProtection.grievanceConfig,
+    grievanceLocationScope: state.grievanceSocialProtection.grievanceLocationScope,
     pendingAttachments: state.grievanceSocialProtection.pendingAttachments,
   };
 }
@@ -746,6 +886,7 @@ function mapDispatchToProps(dispatch) {
   return bindActionCreators(
     {
       createTicket,
+      fetchGrievanceLocationScope,
       setPendingAttachments,
     },
     dispatch,

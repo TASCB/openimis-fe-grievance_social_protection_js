@@ -24,6 +24,7 @@ const TicketLocationFields = ({
   intl,
   required = false,
   fieldNames = {},
+  gridItemClassName = undefined,
 }) => {
   const assignedLevel = locationIndex(scope?.assignedLocation);
   const fields = {
@@ -58,7 +59,7 @@ const TicketLocationFields = ({
         const parentLocation = index > 0 ? value[levels[index - 1].key] ?? null : null;
         const parentMissing = index > 0 && !parentLocation;
         return (
-          <Grid item xs={12} sm={6} md={3} key={key}>
+          <Grid item xs={12} sm={6} md={3} key={key} className={gridItemClassName}>
             <GrievanceLocationPicker
               value={value[key] ?? null}
               parentLocation={parentLocation}
