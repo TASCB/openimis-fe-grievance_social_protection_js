@@ -181,7 +181,7 @@ function GrievanceTypesSearcher({
           {rights.includes(RIGHT_TICKET_DELETE) && (
             <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceType.deleteTooltip")}>
               <IconButton
-                className={`${classes.actionButton} ${classes.deleteButton}`}
+                className={classes.actionButton}
                 onClick={() => setDeleteDialog({ open: true, item: type })}
               >
                 <DeleteIcon />
