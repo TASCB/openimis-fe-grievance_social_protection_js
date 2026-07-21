@@ -49,6 +49,15 @@ const GRIEVANCE_REPORT_PROJECTION = () => [
   "overdue",
   "timelineStatus",
   "timeTakenSeconds",
+  "regionName",
+  "districtName",
+  "grievancesFiled",
+  "openCount",
+  "assignedCount",
+  "reassignedCount",
+  "inProgressCount",
+  "closedCount",
+  "escalatedCount",
 ];
 
 const CATEGORY_FULL_PROJECTION = () => [
@@ -315,7 +324,8 @@ function formatOptionalIdGQL(fieldName, id) {
 function formatReporterGQL(ticket, includeNullReporterType = false) {
   const reporter = parseSerializedReporter(ticket.reporter);
   const reporterType = getReporterType(ticket);
-  const hasReporterType = reporterType !== undefined && reporterType !== null && reporterType !== "";
+  const hasReporterType =
+    reporterType !== undefined && reporterType !== null && reporterType !== "";
   const shouldClearReporterType =
     includeNullReporterType || Object.prototype.hasOwnProperty.call(ticket, "reporterType");
 

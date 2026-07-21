@@ -10,7 +10,6 @@ import {
   formatMessage,
 } from "@openimis/fe-core";
 import {
-  GRIEVANCE_REPORT_OPTIONS,
   GRIEVANCE_REPORT_TYPES,
   MODULE_NAME,
   PAA_GRIEVANCE_FILTER_OPTIONS,
@@ -29,10 +28,6 @@ const TicketReportFilter = ({ classes, filters, onChangeFilters, intl }) => {
     onChangeFilters([{ id, value }]);
   };
 
-  const reportOptions = GRIEVANCE_REPORT_OPTIONS.map((option) => ({
-    value: option.value,
-    label: formatMessage(intl, MODULE_NAME, option.label),
-  }));
   const paaGrievanceFilterOptions = PAA_GRIEVANCE_FILTER_OPTIONS.map((option) => ({
     value: option.value,
     label: formatMessage(intl, MODULE_NAME, option.label),
@@ -46,22 +41,6 @@ const TicketReportFilter = ({ classes, filters, onChangeFilters, intl }) => {
 
   return (
     <Grid container className={classes.form}>
-      <ControlledField
-        module={MODULE_NAME}
-        id="grievanceReport.report"
-        field={
-          <Grid item xs={12} sm={6} md={3} className={classes.item}>
-            <SelectInput
-              module={MODULE_NAME}
-              label="grievanceReport.report"
-              value={filterValue("report")}
-              onChange={(value) => updateFilter("report", value)}
-              options={reportOptions}
-            />
-          </Grid>
-        }
-      />
-
       <ControlledField
         module={MODULE_NAME}
         id="grievanceReport.dateFrom"

@@ -33,6 +33,11 @@ export const GRIEVANT_TYPE_LIST = ["individual", "beneficiary", "user", EXTERNAL
 export const GRIEVANCE_MAIN_MENU_CONTRIBUTION_KEY = "grievance.MainMenu";
 
 export const GRIEVANCE_REPORT_TYPES = {
+  PAA_SUMMARY: "PAA_SUMMARY",
+  STATUS_BY_PAA: "STATUS_BY_PAA",
+  STATUS_BY_CATEGORY: "STATUS_BY_CATEGORY",
+  STATUS_BY_CHANNEL: "STATUS_BY_CHANNEL",
+  CUSTOM: "CUSTOM",
   CATEGORY: "CATEGORY",
   PAA_WITHOUT_GRIEVANCES: "PAA_WITHOUT_GRIEVANCES",
   CHANNEL: "CHANNEL",
@@ -72,31 +77,35 @@ export const PAA_GRIEVANCE_FILTER_OPTIONS = [
 
 export const GRIEVANCE_REPORT_OPTIONS = [
   {
-    value: GRIEVANCE_REPORT_TYPES.CATEGORY,
-    label: "grievanceReport.type.category",
+    value: GRIEVANCE_REPORT_TYPES.PAA_SUMMARY,
+    label: "grievanceReport.type.paaSummary",
   },
   {
-    value: GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES,
-    label: "grievanceReport.type.paaWithoutGrievances",
+    value: GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA,
+    label: "grievanceReport.type.statusByPaa",
   },
   {
-    value: GRIEVANCE_REPORT_TYPES.CHANNEL,
-    label: "grievanceReport.type.channel",
+    value: GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY,
+    label: "grievanceReport.type.statusByCategory",
   },
   {
-    value: GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS,
-    label: "grievanceReport.type.resolutionStatus",
+    value: GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL,
+    label: "grievanceReport.type.statusByChannel",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA,
+    label: "grievanceReport.type.overdue",
   },
   {
     value: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE,
     label: "grievanceReport.type.closureTimeline",
   },
   {
-    value: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
-    label: "grievanceReport.type.closureTimelineByPaa",
+    value: GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES,
+    label: "grievanceReport.type.paaWithoutGrievances",
   },
   {
-    value: GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA,
-    label: "grievanceReport.type.overdueByPaa",
+    value: GRIEVANCE_REPORT_TYPES.CUSTOM,
+    label: "grievanceReport.type.custom",
   },
 ];

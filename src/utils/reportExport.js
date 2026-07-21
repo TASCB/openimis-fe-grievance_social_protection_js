@@ -52,7 +52,9 @@ function downloadFile(fileName, content, mimeType) {
 }
 
 function reportExportRows(columns, reports) {
-  return reports.map((row) => columns.map((column) => stringifyExportValue(column.render(row))));
+  return reports.map((row, rowIndex) =>
+    columns.map((column) => stringifyExportValue(column.render(row, rowIndex))),
+  );
 }
 
 function buildCsv(columns, rows) {
