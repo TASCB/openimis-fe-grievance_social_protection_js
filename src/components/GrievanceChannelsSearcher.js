@@ -179,7 +179,7 @@ function GrievanceChannelsSearcher({
           {rights.includes(RIGHT_TICKET_DELETE) && (
             <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.deleteTooltip")}>
               <IconButton
-                className={`${classes.actionButton} ${classes.deleteButton}`}
+                className={classes.actionButton}
                 onClick={() => setDeleteDialog({ open: true, item: channel })}
               >
                 <DeleteIcon />

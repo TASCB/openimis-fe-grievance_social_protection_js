@@ -180,7 +180,7 @@ function GrievanceCategoriesSearcher({
           {rights.includes(RIGHT_TICKET_DELETE) && (
             <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteTooltip")}>
               <IconButton
-                className={`${classes.actionButton} ${classes.deleteButton}`}
+                className={classes.actionButton}
                 onClick={() => setDeleteDialog({ open: true, item: category })}
               >
                 <DeleteIcon />
