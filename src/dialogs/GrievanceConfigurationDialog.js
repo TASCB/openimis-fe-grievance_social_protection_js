@@ -16,7 +16,7 @@ import {
 } from '../constants';
 
 function GrievanceConfigurationDialog({
-  rights,
+  rights = [],
 }) {
   const modulesManager = useModulesManager();
   const { formatMessage, formatMessageWithValues } = useTranslations(MODULE_NAME, modulesManager);
@@ -65,10 +65,10 @@ function GrievanceConfigurationDialog({
   }, [grievanceConfiguration]);
 
   useEffect(() => {
-    if (!fetchedGrievanceConfig) {
+    if (!fetchedGrievanceConfig && doesUserHaveRights()) {
       dispatch(fetchGrievanceConfiguration());
     }
-  }, [fetchedGrievanceConfig]);
+  }, [fetchedGrievanceConfig, rights]);
 
   return null;
 }
