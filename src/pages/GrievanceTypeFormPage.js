@@ -3,30 +3,20 @@ import { injectIntl } from "react-intl";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { withTheme, withStyles } from "@material-ui/core/styles";
+import DeleteIcon from "@material-ui/icons/Delete";
 import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  FormControlLabel,
-  Grid,
-  Paper,
-  Typography,
-} from "@material-ui/core";
-import {
+  Form,
+  Helmet,
+  ProgressOrError,
+  coreConfirm,
   formatMessage,
   formatMessageWithValues,
   historyPush,
   journalize,
-  ProgressOrError,
-  PublishedComponent,
-  TextInput,
   withHistory,
   withModulesManager,
 } from "@openimis/fe-core";
+import GrievanceTypeHeadPanel from "../components/GrievanceTypeHeadPanel";
 import {
   createGrievanceType,
   deleteGrievanceType,
@@ -41,233 +31,147 @@ import {
   RIGHT_TICKET_SEARCH,
 } from "../constants";
 
-const styles = (theme) => ({
-  page: theme.page,
-  paper: {
-    ...theme.paper.paper,
-    padding: theme.spacing(3),
-  },
-  actions: {
-    marginTop: theme.spacing(3),
-    display: "flex",
-    gap: theme.spacing(2),
-  },
-  deleteButton: {
-    marginLeft: "auto",
-    color: theme.palette.error.main,
-    borderColor: theme.palette.error.main,
-  },
-});
+const styles = (theme) => ({ page: theme.page });
+
+const ROUTE_LIST = "grievanceSocialProtection.route.ticketTypes";
 
 function newType() {
   return { code: "", name: "", isActive: true, category: null };
 }
 
-function GrievanceTypeFormPage({
-  mode,
-  classes,
-  intl,
-  modulesManager,
-  history,
-  typeId,
-  grievanceType,
-  fetchingGrievanceType,
-  errorGrievanceType,
-  submittingMutation,
-  mutation,
-  rights,
-  fetchGrievanceType,
-  createGrievanceType,
-  updateGrievanceType,
-  deleteGrievanceType,
-  journalize,
-}) {
+function GrievanceTypeFormPage(props) {
+  const {
+    mode, classes, intl, modulesManager, history, typeId, grievanceType,
+    fetchingGrievanceType, errorGrievanceType, submittingMutation, mutation, rights,
+    confirmed,
+  } = props;
+
   const [edited, setEdited] = useState(newType());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const previousSubmittingMutation = useRef(false);
-  const readOnly = mode === "view";
+  const [resetKey, setResetKey] = useState(0);
+  const prevSubmitting = useRef(false);
+  const prevConfirmed = useRef(false);
+  const confirmedAction = useRef(null);
+
   const isCreate = mode === "create";
+  const canEdit = rights.includes(RIGHT_TICKET_EDIT);
+  const readOnly = !isCreate && !canEdit;
 
   useEffect(() => {
     if (!isCreate && typeId) {
-      fetchGrievanceType(modulesManager, [`id: "${typeId}"`, "first: 1"]);
+      props.fetchGrievanceType(modulesManager, [`id: "${typeId}"`, "first: 1"]);
     }
-  }, [isCreate, typeId, modulesManager, fetchGrievanceType]);
+  }, [isCreate, typeId, modulesManager]);
 
   useEffect(() => {
     if (!isCreate && grievanceType) {
       setEdited(grievanceType);
+      setResetKey((key) => key + 1);
     }
   }, [isCreate, grievanceType]);
 
   useEffect(() => {
-    if (previousSubmittingMutation.current && !submittingMutation && mutation) {
-      journalize(mutation);
-      historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketTypes");
+    if (prevSubmitting.current && !submittingMutation && mutation) {
+      props.journalize(mutation);
+      historyPush(modulesManager, history, ROUTE_LIST);
     }
-    previousSubmittingMutation.current = submittingMutation;
-  }, [submittingMutation, mutation, journalize, modulesManager, history]);
+    prevSubmitting.current = submittingMutation;
+  }, [submittingMutation, mutation]);
 
-  const canSave = () => !!edited.name && !!edited.category?.id;
-
-  const save = () => {
-    if (!canSave()) return;
-    if (isCreate) {
-      createGrievanceType(
-        edited,
-        formatMessageWithValues(intl, MODULE_NAME, "grievanceType.createMutationLabel", {
-          name: edited.name,
-        }),
-      );
-    } else {
-      updateGrievanceType(
-        edited,
-        formatMessageWithValues(intl, MODULE_NAME, "grievanceType.updateMutationLabel", {
-          name: edited.name,
-        }),
-      );
+  useEffect(() => {
+    if (!prevConfirmed.current && confirmed && confirmedAction.current) {
+      confirmedAction.current();
+      confirmedAction.current = null;
     }
+    prevConfirmed.current = confirmed;
+  }, [confirmed]);
+
+  const canSave = () => !readOnly && !!edited.name && !!edited.category;
+
+  const save = (data) => {
+    const label = formatMessageWithValues(
+      intl,
+      MODULE_NAME,
+      isCreate ? "grievanceType.createMutationLabel" : "grievanceType.updateMutationLabel",
+      { name: data.name },
+    );
+    if (isCreate) props.createGrievanceType(data, label);
+    else props.updateGrievanceType(data, label);
   };
 
-  const handleDeleteConfirm = () => {
-    setDeleteDialogOpen(false);
-    deleteGrievanceType(
-      edited,
-      formatMessageWithValues(intl, MODULE_NAME, "grievanceType.deleteMutationLabel", {
+  const onDelete = () => {
+    confirmedAction.current = () =>
+      props.deleteGrievanceType(
+        edited,
+        formatMessageWithValues(intl, MODULE_NAME, "grievanceType.deleteMutationLabel", {
+          name: edited.name,
+        }),
+      );
+    props.coreConfirm(
+      formatMessage(intl, MODULE_NAME, "grievanceType.deleteConfirmTitle"),
+      formatMessageWithValues(intl, MODULE_NAME, "grievanceType.deleteConfirmMessage", {
         name: edited.name,
       }),
     );
   };
 
-  const back = () =>
-    historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketTypes");
+  const back = () => historyPush(modulesManager, history, ROUTE_LIST);
 
-  const titleKey =
-    mode === "create"
-      ? "grievanceType.createPageTitle"
-      : mode === "edit"
-        ? "grievanceType.editPageTitle"
-        : "grievanceType.viewPageTitle";
+  const titleKey = isCreate
+    ? "grievanceType.createPageTitle"
+    : mode === "edit"
+      ? "grievanceType.editPageTitle"
+      : "grievanceType.viewPageTitle";
 
-  const titleValues = { name: edited.name || grievanceType?.name || "" };
-  const canAccess =
-    (mode === "create" && rights.includes(RIGHT_TICKET_ADD)) ||
-    (mode === "edit" && rights.includes(RIGHT_TICKET_EDIT)) ||
-    (mode === "view" && rights.includes(RIGHT_TICKET_SEARCH));
+  const canAccess = isCreate
+    ? rights.includes(RIGHT_TICKET_ADD)
+    : canEdit || rights.includes(RIGHT_TICKET_SEARCH);
 
   if (!canAccess) return null;
 
+  const actions =
+    !isCreate && rights.includes(RIGHT_TICKET_DELETE)
+      ? [
+          {
+            doIt: onDelete,
+            icon: <DeleteIcon />,
+            disabled: submittingMutation,
+            tooltip: formatMessage(intl, MODULE_NAME, "grievanceType.delete"),
+          },
+        ]
+      : [];
+
   return (
     <div className={classes.page}>
+      <Helmet title={formatMessage(intl, MODULE_NAME, titleKey)} />
       <ProgressOrError progress={fetchingGrievanceType && !isCreate} error={errorGrievanceType} />
       {(isCreate || grievanceType) && (
-        <Paper className={classes.paper}>
-          <Typography variant="h6">
-            {formatMessageWithValues(intl, MODULE_NAME, titleKey, titleValues)}
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextInput
-                module={MODULE_NAME}
-                label="grievanceType.code"
-                value={edited.code || ""}
-                readOnly={readOnly}
-                onChange={(code) => setEdited((prev) => ({ ...prev, code }))}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextInput
-                module={MODULE_NAME}
-                label="grievanceType.name"
-                value={edited.name || ""}
-                required
-                readOnly={readOnly}
-                onChange={(name) => setEdited((prev) => ({ ...prev, name }))}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <PublishedComponent
-                pubRef="grievanceSocialProtection.GrievanceCategoryPicker"
-                value={edited.category}
-                readOnly={readOnly}
-                required
-                onChange={(category) => setEdited((prev) => ({ ...prev, category }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    color="primary"
-                    checked={!!edited.isActive}
-                    disabled={readOnly}
-                    onChange={(event) =>
-                      setEdited((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                }
-                label={formatMessage(intl, MODULE_NAME, "grievanceType.active")}
-              />
-            </Grid>
-          </Grid>
-          <div className={classes.actions}>
-            <Button variant="outlined" onClick={back}>
-              {formatMessage(intl, MODULE_NAME, "grievanceType.back")}
-            </Button>
-            {!readOnly && (
-              <Button
-                color="primary"
-                variant="contained"
-                disabled={!canSave() || submittingMutation}
-                onClick={save}
-              >
-                {formatMessage(
-                  intl,
-                  MODULE_NAME,
-                  isCreate ? "grievanceType.create" : "grievanceType.save",
-                )}
-              </Button>
-            )}
-            {mode === "edit" && rights.includes(RIGHT_TICKET_DELETE) && (
-              <Button
-                variant="outlined"
-                className={classes.deleteButton}
-                disabled={submittingMutation}
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                {formatMessage(intl, MODULE_NAME, "grievanceType.delete")}
-              </Button>
-            )}
-          </div>
-        </Paper>
+        <Form
+          key={resetKey}
+          module={MODULE_NAME}
+          title={titleKey}
+          titleParams={{ name: edited.name ?? "" }}
+          edited={edited}
+          edited_id={typeId}
+          reset={resetKey}
+          openDirty
+          onEditedChanged={setEdited}
+          back={back}
+          save={readOnly ? null : save}
+          canSave={canSave}
+          saveTooltip={formatMessage(intl, MODULE_NAME, "grievanceType.save")}
+          HeadPanel={GrievanceTypeHeadPanel}
+          readOnly={readOnly}
+          actions={actions}
+          rights={rights}
+        />
       )}
-
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>
-          {formatMessage(intl, MODULE_NAME, "grievanceType.deleteConfirmTitle")}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {formatMessageWithValues(intl, MODULE_NAME, "grievanceType.deleteConfirmMessage", {
-              name: edited.name,
-            })}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            {formatMessage(intl, MODULE_NAME, "cancel")}
-          </Button>
-          <Button color="secondary" onClick={handleDeleteConfirm}>
-            {formatMessage(intl, MODULE_NAME, "grievanceType.delete")}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 }
 
 const mapStateToProps = (state, props) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
+  confirmed: state.core.confirmed,
   typeId: props.match?.params?.type_id,
   grievanceType: state.grievanceSocialProtection.grievanceType,
   fetchingGrievanceType: state.grievanceSocialProtection.fetchingGrievanceType,
@@ -283,6 +187,7 @@ const mapDispatchToProps = (dispatch) =>
       createGrievanceType,
       updateGrievanceType,
       deleteGrievanceType,
+      coreConfirm,
       journalize,
     },
     dispatch,

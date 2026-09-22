@@ -3,29 +3,20 @@ import { injectIntl } from "react-intl";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { withTheme, withStyles } from "@material-ui/core/styles";
+import DeleteIcon from "@material-ui/icons/Delete";
 import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  FormControlLabel,
-  Grid,
-  Paper,
-  Typography,
-} from "@material-ui/core";
-import {
+  Form,
+  Helmet,
+  ProgressOrError,
+  coreConfirm,
   formatMessage,
   formatMessageWithValues,
   historyPush,
   journalize,
-  ProgressOrError,
-  TextInput,
   withHistory,
   withModulesManager,
 } from "@openimis/fe-core";
+import GrievanceCategoryHeadPanel from "../components/GrievanceCategoryHeadPanel";
 import {
   createGrievanceCategory,
   deleteGrievanceCategory,
@@ -40,240 +31,148 @@ import {
   RIGHT_TICKET_SEARCH,
 } from "../constants";
 
-const styles = (theme) => ({
-  page: theme.page,
-  paper: {
-    ...theme.paper.paper,
-    padding: theme.spacing(3),
-  },
-  actions: {
-    marginTop: theme.spacing(3),
-    display: "flex",
-    gap: theme.spacing(2),
-  },
-  deleteButton: {
-    marginLeft: "auto",
-    color: theme.palette.error.main,
-    borderColor: theme.palette.error.main,
-  },
-});
+const styles = (theme) => ({ page: theme.page });
+
+const ROUTE_LIST = "grievanceSocialProtection.route.ticketCategories";
 
 function newCategory() {
   return { code: "", name: "", timeline: 0, isActive: true };
 }
 
-function GrievanceCategoryFormPage({
-  mode,
-  classes,
-  intl,
-  modulesManager,
-  history,
-  categoryId,
-  grievanceCategory,
-  fetchingGrievanceCategory,
-  errorGrievanceCategory,
-  submittingMutation,
-  mutation,
-  rights,
-  fetchGrievanceCategory,
-  createGrievanceCategory,
-  updateGrievanceCategory,
-  deleteGrievanceCategory,
-  journalize,
-}) {
+function GrievanceCategoryFormPage(props) {
+  const {
+    mode, classes, intl, modulesManager, history, categoryId, grievanceCategory,
+    fetchingGrievanceCategory, errorGrievanceCategory, submittingMutation, mutation, rights,
+    confirmed,
+  } = props;
+
   const [edited, setEdited] = useState(newCategory());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const previousSubmittingMutation = useRef(false);
-  const readOnly = mode === "view";
+  const [resetKey, setResetKey] = useState(0);
+  const prevSubmitting = useRef(false);
+  const prevConfirmed = useRef(false);
+  const confirmedAction = useRef(null);
+
   const isCreate = mode === "create";
+  const canEdit = rights.includes(RIGHT_TICKET_EDIT);
+  const readOnly = !isCreate && !canEdit;
 
   useEffect(() => {
     if (!isCreate && categoryId) {
-      fetchGrievanceCategory(modulesManager, [`id: "${categoryId}"`, "first: 1"]);
+      props.fetchGrievanceCategory(modulesManager, [`id: "${categoryId}"`, "first: 1"]);
     }
-  }, [isCreate, categoryId, modulesManager, fetchGrievanceCategory]);
+  }, [isCreate, categoryId, modulesManager]);
 
   useEffect(() => {
     if (!isCreate && grievanceCategory) {
       setEdited(grievanceCategory);
+      setResetKey((key) => key + 1);
     }
   }, [isCreate, grievanceCategory]);
 
   useEffect(() => {
-    if (previousSubmittingMutation.current && !submittingMutation && mutation) {
-      journalize(mutation);
-      historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketCategories");
+    if (prevSubmitting.current && !submittingMutation && mutation) {
+      props.journalize(mutation);
+      historyPush(modulesManager, history, ROUTE_LIST);
     }
-    previousSubmittingMutation.current = submittingMutation;
-  }, [submittingMutation, mutation, journalize, modulesManager, history]);
+    prevSubmitting.current = submittingMutation;
+  }, [submittingMutation, mutation]);
+
+  useEffect(() => {
+    if (!prevConfirmed.current && confirmed && confirmedAction.current) {
+      confirmedAction.current();
+      confirmedAction.current = null;
+    }
+    prevConfirmed.current = confirmed;
+  }, [confirmed]);
 
   const timeline = Number.parseInt(edited.timeline, 10);
-  const canSave = () => !!edited.name && !Number.isNaN(timeline) && timeline >= 0;
+  const canSave = () => !readOnly && !!edited.name && !Number.isNaN(timeline) && timeline >= 0;
 
-  const save = () => {
-    if (!canSave()) return;
-    if (isCreate) {
-      createGrievanceCategory(
-        edited,
-        formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.createMutationLabel", {
-          name: edited.name,
-        }),
-      );
-    } else {
-      updateGrievanceCategory(
-        edited,
-        formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.updateMutationLabel", {
-          name: edited.name,
-        }),
-      );
-    }
+  const save = (data) => {
+    const label = formatMessageWithValues(
+      intl,
+      MODULE_NAME,
+      isCreate ? "grievanceCategory.createMutationLabel" : "grievanceCategory.updateMutationLabel",
+      { name: data.name },
+    );
+    if (isCreate) props.createGrievanceCategory(data, label);
+    else props.updateGrievanceCategory(data, label);
   };
 
-  const handleDeleteConfirm = () => {
-    setDeleteDialogOpen(false);
-    deleteGrievanceCategory(
-      edited,
-      formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.deleteMutationLabel", {
+  const onDelete = () => {
+    confirmedAction.current = () =>
+      props.deleteGrievanceCategory(
+        edited,
+        formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.deleteMutationLabel", {
+          name: edited.name,
+        }),
+      );
+    props.coreConfirm(
+      formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteConfirmTitle"),
+      formatMessageWithValues(intl, MODULE_NAME, "grievanceCategory.deleteConfirmMessage", {
         name: edited.name,
       }),
     );
   };
 
-  const back = () =>
-    historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketCategories");
+  const back = () => historyPush(modulesManager, history, ROUTE_LIST);
 
-  const titleKey =
-    mode === "create"
-      ? "grievanceCategory.createPageTitle"
-      : mode === "edit"
-        ? "grievanceCategory.editPageTitle"
-        : "grievanceCategory.viewPageTitle";
+  const titleKey = isCreate
+    ? "grievanceCategory.createPageTitle"
+    : mode === "edit"
+      ? "grievanceCategory.editPageTitle"
+      : "grievanceCategory.viewPageTitle";
 
-  const titleValues = { name: edited.name || grievanceCategory?.name || "" };
-  const canAccess =
-    (mode === "create" && rights.includes(RIGHT_TICKET_ADD)) ||
-    (mode === "edit" && rights.includes(RIGHT_TICKET_EDIT)) ||
-    (mode === "view" && rights.includes(RIGHT_TICKET_SEARCH));
+  const canAccess = isCreate
+    ? rights.includes(RIGHT_TICKET_ADD)
+    : canEdit || rights.includes(RIGHT_TICKET_SEARCH);
 
   if (!canAccess) return null;
 
+  const actions =
+    !isCreate && rights.includes(RIGHT_TICKET_DELETE)
+      ? [
+          {
+            doIt: onDelete,
+            icon: <DeleteIcon />,
+            disabled: submittingMutation,
+            tooltip: formatMessage(intl, MODULE_NAME, "grievanceCategory.delete"),
+          },
+        ]
+      : [];
+
   return (
     <div className={classes.page}>
+      <Helmet title={formatMessage(intl, MODULE_NAME, titleKey)} />
       <ProgressOrError progress={fetchingGrievanceCategory && !isCreate} error={errorGrievanceCategory} />
       {(isCreate || grievanceCategory) && (
-        <Paper className={classes.paper}>
-          <Typography variant="h6">
-            {formatMessageWithValues(intl, MODULE_NAME, titleKey, titleValues)}
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
-              <TextInput
-                module={MODULE_NAME}
-                label="grievanceCategory.code"
-                value={edited.code || ""}
-                readOnly={readOnly}
-                onChange={(code) => setEdited((prev) => ({ ...prev, code }))}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextInput
-                module={MODULE_NAME}
-                label="grievanceCategory.name"
-                value={edited.name || ""}
-                required
-                readOnly={readOnly}
-                onChange={(name) => setEdited((prev) => ({ ...prev, name }))}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextInput
-                module={MODULE_NAME}
-                label="grievanceCategory.timeline"
-                value={edited.timeline ?? ""}
-                required
-                readOnly={readOnly}
-                type="number"
-                inputProps={{ min: 0 }}
-                onChange={(timeline) => setEdited((prev) => ({ ...prev, timeline }))}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    color="primary"
-                    checked={!!edited.isActive}
-                    disabled={readOnly}
-                    onChange={(event) =>
-                      setEdited((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                }
-                label={formatMessage(intl, MODULE_NAME, "grievanceCategory.active")}
-              />
-            </Grid>
-          </Grid>
-          <div className={classes.actions}>
-            <Button variant="outlined" onClick={back}>
-              {formatMessage(intl, MODULE_NAME, "grievanceCategory.back")}
-            </Button>
-            {!readOnly && (
-              <Button
-                color="primary"
-                variant="contained"
-                disabled={!canSave() || submittingMutation}
-                onClick={save}
-              >
-                {formatMessage(
-                  intl,
-                  MODULE_NAME,
-                  isCreate ? "grievanceCategory.create" : "grievanceCategory.save",
-                )}
-              </Button>
-            )}
-            {mode === "edit" && rights.includes(RIGHT_TICKET_DELETE) && (
-              <Button
-                variant="outlined"
-                className={classes.deleteButton}
-                disabled={submittingMutation}
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                {formatMessage(intl, MODULE_NAME, "grievanceCategory.delete")}
-              </Button>
-            )}
-          </div>
-        </Paper>
+        <Form
+          key={resetKey}
+          module={MODULE_NAME}
+          title={titleKey}
+          titleParams={{ name: edited.name ?? "" }}
+          edited={edited}
+          edited_id={categoryId}
+          reset={resetKey}
+          openDirty
+          onEditedChanged={setEdited}
+          back={back}
+          save={readOnly ? null : save}
+          canSave={canSave}
+          saveTooltip={formatMessage(intl, MODULE_NAME, "grievanceCategory.save")}
+          HeadPanel={GrievanceCategoryHeadPanel}
+          readOnly={readOnly}
+          actions={actions}
+          rights={rights}
+        />
       )}
-
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>
-          {formatMessage(intl, MODULE_NAME, "grievanceCategory.deleteConfirmTitle")}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {formatMessageWithValues(
-              intl,
-              MODULE_NAME,
-              "grievanceCategory.deleteConfirmMessage",
-              { name: edited.name },
-            )}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            {formatMessage(intl, MODULE_NAME, "cancel")}
-          </Button>
-          <Button color="secondary" onClick={handleDeleteConfirm}>
-            {formatMessage(intl, MODULE_NAME, "grievanceCategory.delete")}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 }
 
 const mapStateToProps = (state, props) => ({
   rights: state.core?.user?.i_user?.rights ?? [],
+  confirmed: state.core.confirmed,
   categoryId: props.match?.params?.category_id,
   grievanceCategory: state.grievanceSocialProtection.grievanceCategory,
   fetchingGrievanceCategory: state.grievanceSocialProtection.fetchingGrievanceCategory,
@@ -289,6 +188,7 @@ const mapDispatchToProps = (dispatch) =>
       createGrievanceCategory,
       updateGrievanceCategory,
       deleteGrievanceCategory,
+      coreConfirm,
       journalize,
     },
     dispatch,

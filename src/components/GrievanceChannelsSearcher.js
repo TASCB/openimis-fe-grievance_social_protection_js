@@ -11,10 +11,10 @@ import {
   IconButton,
   Tooltip,
 } from "@material-ui/core";
+import { Chip } from "@material-ui/core";
 import { withStyles, withTheme } from "@material-ui/core/styles";
 import { connect } from "react-redux";
 import EditIcon from "@material-ui/icons/Edit";
-import VisibilityIcon from "@material-ui/icons/Visibility";
 import DeleteIcon from "@material-ui/icons/Delete";
 import {
   Searcher,
@@ -32,24 +32,7 @@ function styles(theme) {
   return {
     paper: { ...theme.paper.paper, margin: 0 },
     paperHeader: { ...theme.paper.header, padding: 10 },
-    searcher: {
-      "& table thead tr th:last-child, & table tbody tr td:last-child": {
-        width: 116,
-        minWidth: 116,
-        maxWidth: 116,
-        paddingLeft: theme.spacing(0.5),
-        paddingRight: theme.spacing(0.5),
-        whiteSpace: "nowrap",
-      },
-    },
-    actionCell: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      width: 108,
-      minWidth: 108,
-      maxWidth: 108,
-    },
+    actionCell: { ...(theme.buttonContainer?.horizontal ?? {}) },
     actionButton: {
       width: 32,
       height: 32,
@@ -60,6 +43,12 @@ function styles(theme) {
       },
     },
     deleteButton: { color: theme.palette.error.main },
+    statusChip: {
+      fontWeight: 500,
+      fontSize: "0.75rem",
+      backgroundColor: theme.palette.grey[500],
+      color: "#fff",
+    },
   };
 }
 
@@ -136,28 +125,19 @@ function GrievanceChannelsSearcher({
   const itemFormatters = () => {
     return [
       (channel) => channel.name,
-      (channel) =>
-        channel.isActive
-          ? formatMessage(intl, MODULE_NAME, "status.active")
-          : formatMessage(intl, MODULE_NAME, "status.inactive"),
+      (channel) => (
+        <Chip
+          size="small"
+          className={classes.statusChip}
+          label={formatMessage(
+            intl,
+            MODULE_NAME,
+            channel.isActive ? "status.active" : "status.inactive",
+          )}
+        />
+      ),
       (channel) => (
         <div className={classes.actionCell}>
-          <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.viewTooltip")}>
-            <IconButton
-              className={classes.actionButton}
-              onClick={() =>
-                historyPush(
-                  modulesManager,
-                  history,
-                  "grievanceSocialProtection.route.ticketChannel",
-                  [channel.id],
-                  false,
-                )
-              }
-            >
-              <VisibilityIcon />
-            </IconButton>
-          </Tooltip>
           {rights.includes(RIGHT_TICKET_EDIT) && (
             <Tooltip title={formatMessage(intl, MODULE_NAME, "grievanceChannel.editTooltip")}>
               <IconButton
@@ -166,7 +146,7 @@ function GrievanceChannelsSearcher({
                   historyPush(
                     modulesManager,
                     history,
-                    "grievanceSocialProtection.route.ticketChannelEdit",
+                    "grievanceSocialProtection.route.ticketChannel",
                     [channel.id],
                     false,
                   )
@@ -195,7 +175,7 @@ function GrievanceChannelsSearcher({
 
   return (
     <>
-      <div className={classes.searcher}>
+      <div>
         <Searcher
           module={MODULE_NAME}
           cacheFiltersKey={cacheFiltersKey}
@@ -216,6 +196,7 @@ function GrievanceChannelsSearcher({
           filtersToQueryParams={filtersToQueryParams}
           defaultOrderBy="name"
           headers={headers}
+          aligns={() => headers().map((_, i, a) => (i === a.length - 1 ? "right" : null))}
           itemFormatters={itemFormatters}
           sorts={() => [["name", true]]}
           onDoubleClick={(channel) =>

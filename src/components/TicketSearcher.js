@@ -38,17 +38,11 @@ const styles = (theme) => ({
   fab: theme.fab,
   button: { margin: theme.spacing(1) },
   item: { padding: theme.spacing(1) },
-  overdue: {
-    backgroundColor: theme.palette.error.main,
-    color: theme.palette.error.contrastText,
-  },
-  onTime: {
-    backgroundColor: theme.palette.success?.main || "#2e7d32",
-    color: theme.palette.success?.contrastText || "#fff",
-  },
-  resolvedLate: {
-    backgroundColor: theme.palette.warning?.main || "#ed6c02",
-    color: theme.palette.warning?.contrastText || "#fff",
+  statusChip: {
+    fontWeight: 500,
+    fontSize: "0.75rem",
+    backgroundColor: theme.palette.grey[500],
+    color: "#fff",
   },
 });
 
@@ -198,15 +192,10 @@ class TicketSearcher extends Component {
 
   renderTimelineStatus = (ticket) => {
     const { classes, intl } = this.props;
-    const className = {
-      OVERDUE: classes.overdue,
-      ON_TIME: classes.onTime,
-      RESOLVED_LATE: classes.resolvedLate,
-    }[ticket.timelineStatus];
     return (
       <Chip
         size="small"
-        className={className}
+        className={classes.statusChip}
         label={formatTimelineStatus(intl, ticket.timelineStatus)}
       />
     );
