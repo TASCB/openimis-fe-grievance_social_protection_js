@@ -159,7 +159,7 @@ function GrievanceChannelFormPage(props) {
           save={readOnly ? null : save}
           canSave={canSave}
           saveTooltip={formatMessage(intl, MODULE_NAME, "grievanceChannel.save")}
-          HeadPanel={GrievanceChannelHeadPanel}
+          Panels={[GrievanceChannelHeadPanel]}
           readOnly={readOnly}
           actions={actions}
           rights={rights}

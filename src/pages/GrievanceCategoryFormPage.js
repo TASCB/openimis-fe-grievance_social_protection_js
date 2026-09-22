@@ -160,7 +160,7 @@ function GrievanceCategoryFormPage(props) {
           save={readOnly ? null : save}
           canSave={canSave}
           saveTooltip={formatMessage(intl, MODULE_NAME, "grievanceCategory.save")}
-          HeadPanel={GrievanceCategoryHeadPanel}
+          Panels={[GrievanceCategoryHeadPanel]}
           readOnly={readOnly}
           actions={actions}
           rights={rights}

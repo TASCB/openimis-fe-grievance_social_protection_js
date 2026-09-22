@@ -336,5 +336,8 @@
   "grievanceReport.type.resolutionStatus": "Grievance Resolution Status",
   "grievanceReport.type.closureTimeline": "Closed Grievances Timeline",
   "grievanceReport.type.closureTimelineByPaa": "Grievance Closure Timelines by PAA",
-  "grievanceReport.type.overdueByPaa": "Overdue Grievances by PAA"
+  "grievanceReport.type.overdueByPaa": "Overdue Grievances by PAA",
+  "grievanceChannel.headPanel.title": "Channel Details",
+  "grievanceCategory.headPanel.title": "Category Details",
+  "grievanceType.headPanel.title": "Type Details"
 }
