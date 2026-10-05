@@ -29,7 +29,7 @@ import EditTicketPage from '../pages/EditTicketPage';
 import AddTicketPage from '../pages/AddTicketPage';
 import TicketCommentPanel from './TicketCommentsPanel';
 import TicketAttachmentsPanel from './TicketAttachmentsPanel';
-import { MODULE_NAME, TICKET_STATUSES } from '../constants';
+import { MODULE_NAME, RIGHT_TICKET_SEARCH, TICKET_STATUSES } from '../constants';
 
 class TicketForm extends Component {
   constructor(props) {
@@ -43,7 +43,9 @@ class TicketForm extends Component {
   }
 
   componentDidMount() {
-    this.props.fetchGrievanceConfiguration();
+    if (this.props.rights.includes(RIGHT_TICKET_SEARCH)) {
+      this.props.fetchGrievanceConfiguration();
+    }
     if (this.props.ticketUuid) {
       this.setState((state, props) => ({ ticketUuid: props.ticketUuid }));
     }
