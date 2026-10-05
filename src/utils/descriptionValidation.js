@@ -1,5 +1,5 @@
-export const DESCRIPTION_MIN_WORDS = 45;
-export const DESCRIPTION_MAX_WORDS = 150;
+export const DESCRIPTION_MIN_WORDS = 20;
+export const DESCRIPTION_MAX_WORDS = 45;
 
 export function countDescriptionWords(description) {
   return String(description || "")

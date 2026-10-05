@@ -23,6 +23,7 @@ function GrievanceConfigurationDialog({
   const dispatch = useDispatch();
   const grievanceConfiguration = useSelector((state) => state?.grievanceSocialProtection?.grievanceConfig);
   const fetchedGrievanceConfig = useSelector((state) => state?.grievanceSocialProtection?.fetchedGrievanceConfig);
+  const fetchingGrievanceConfig = useSelector((state) => state?.grievanceSocialProtection?.fetchingGrievanceConfig);
 
   const doesUserHaveRights = () => {
     const rightsArray = [
@@ -65,10 +66,10 @@ function GrievanceConfigurationDialog({
   }, [grievanceConfiguration]);
 
   useEffect(() => {
-    if (!fetchedGrievanceConfig) {
+    if (doesUserHaveRights() && !fetchingGrievanceConfig && !fetchedGrievanceConfig) {
       dispatch(fetchGrievanceConfiguration());
     }
-  }, [fetchedGrievanceConfig]);
+  }, [rights, fetchingGrievanceConfig, fetchedGrievanceConfig]);
 
   return null;
 }
