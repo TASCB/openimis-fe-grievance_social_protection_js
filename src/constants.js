@@ -51,78 +51,48 @@ export const GRIEVANCE_REPORT_TYPES = {
 
 export const GRIEVANCE_DASHBOARD_PERIODS = ["MONTH", "WEEK", "DAY"];
 
-// One dashboard widget per backend report. `report` is the report whose rows the
-// widget draws; `linkReport` is the full report page the card links to (omitted
-// when the report has no table page). CLOSURE_TIMELINE and
-// CLOSURE_TIMELINE_BY_PAA return the same per-ticket rows, so both widgets draw
-// from CLOSURE_TIMELINE_BY_PAA and it is only fetched once.
+// Dashboard widgets and the reports each one is drawn from. `linkReport` is the
+// full report page the card links to; `stackedReport`/`stackedLinkReport` are
+// used when the card is switched to its "by status" view.
 export const GRIEVANCE_DASHBOARD_WIDGETS = [
-  { id: "kpis", report: GRIEVANCE_REPORT_TYPES.SUMMARY },
-  { id: "trend", report: GRIEVANCE_REPORT_TYPES.TREND },
-  {
-    id: "resolutionStatus",
-    report: GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS,
-    linkReport: GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS,
-  },
+  { id: "kpis", reports: [GRIEVANCE_REPORT_TYPES.SUMMARY] },
+  { id: "trend", reports: [GRIEVANCE_REPORT_TYPES.TREND] },
   {
     id: "category",
-    report: GRIEVANCE_REPORT_TYPES.CATEGORY,
+    reports: [GRIEVANCE_REPORT_TYPES.CATEGORY, GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY],
     linkReport: GRIEVANCE_REPORT_TYPES.CATEGORY,
-  },
-  {
-    id: "statusByCategory",
-    report: GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY,
-    linkReport: GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY,
+    stackedLinkReport: GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY,
   },
   {
     id: "channel",
-    report: GRIEVANCE_REPORT_TYPES.CHANNEL,
+    reports: [GRIEVANCE_REPORT_TYPES.CHANNEL, GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL],
     linkReport: GRIEVANCE_REPORT_TYPES.CHANNEL,
+    stackedLinkReport: GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL,
   },
   {
-    id: "statusByChannel",
-    report: GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL,
-    linkReport: GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL,
+    id: "resolutionStatus",
+    reports: [GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS],
+    linkReport: GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS,
   },
   {
-    id: "closureTimeliness",
-    report: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
-    linkReport: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE,
-  },
-  {
-    id: "closureByPaa",
-    report: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
-    linkReport: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
-  },
-  {
-    id: "paaSummary",
-    report: GRIEVANCE_REPORT_TYPES.PAA_SUMMARY,
-    linkReport: GRIEVANCE_REPORT_TYPES.PAA_SUMMARY,
-  },
-  {
-    id: "statusByPaa",
-    report: GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA,
+    id: "paaLeague",
+    reports: [GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA, GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA],
     linkReport: GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA,
   },
   {
-    id: "overdueByPaa",
-    report: GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA,
-    linkReport: GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA,
+    id: "closureByPaa",
+    reports: [GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA],
+    linkReport: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
   },
   {
-    id: "paaWithoutGrievances",
-    report: GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES,
+    id: "coverageGap",
+    reports: [GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES],
     linkReport: GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES,
-  },
-  {
-    id: "topIssues",
-    report: GRIEVANCE_REPORT_TYPES.CUSTOM,
-    linkReport: GRIEVANCE_REPORT_TYPES.CUSTOM,
   },
 ];
 
 export const GRIEVANCE_DASHBOARD_REPORTS = [
-  ...new Set(GRIEVANCE_DASHBOARD_WIDGETS.map((widget) => widget.report)),
+  ...new Set(GRIEVANCE_DASHBOARD_WIDGETS.flatMap((widget) => widget.reports)),
 ];
 
 export const GRIEVANCE_REPORT_STATUS_ORDER = ["RECEIVED", "UNRESOLVED", "CLOSED"];
@@ -185,5 +155,21 @@ export const GRIEVANCE_REPORT_OPTIONS = [
   {
     value: GRIEVANCE_REPORT_TYPES.CUSTOM,
     label: "grievanceReport.type.custom",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.CATEGORY,
+    label: "grievanceReport.type.category",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.CHANNEL,
+    label: "grievanceReport.type.channel",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS,
+    label: "grievanceReport.type.resolutionStatus",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.CLOSURE_TIMELINE_BY_PAA,
+    label: "grievanceReport.type.closureTimelineByPaa",
   },
 ];

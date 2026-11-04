@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
-import { Button, Grid, MenuItem, TextField, Typography } from "@material-ui/core";
+import { Button, FormControlLabel, Grid, MenuItem, Switch, TextField, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import RefreshIcon from "@material-ui/icons/Refresh";
 import {
@@ -18,18 +18,15 @@ import {
   GRIEVANCE_DASHBOARD_WIDGETS,
   MODULE_NAME,
 } from "../../constants";
+import { normalizeDate, normalizeId, parseLocationId } from "../TicketReportSearcher";
 import {
   closureByPaaData,
-  closureTimelinessData,
   dimensionData,
-  overdueByPaaData,
-  paaSummaryData,
+  paaLeagueData,
   paaWithoutGrievancesData,
   sectionRows,
   statusByDimensionData,
-  statusByPaaData,
   summaryKpis,
-  topIssuesData,
   trendData,
 } from "./dashboardData";
 import {
@@ -41,7 +38,6 @@ import {
   SimpleTable,
   STATUS_COLORS,
   StackedStatusChart,
-  TIMELINE_COLORS,
   TrendChart,
   WidgetCard,
   formatNumber,
@@ -53,26 +49,31 @@ const useStyles = makeStyles((theme) => ({
   root: { padding: theme.spacing(2) },
   heading: { fontWeight: 700, marginBottom: theme.spacing(0.5) },
   intro: { color: theme.palette.text.secondary, marginBottom: theme.spacing(2) },
-  filters: { marginBottom: theme.spacing(2), alignItems: "flex-end" },
+  filters: {
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(1),
+    borderRadius: 12,
+    border: `1px solid ${theme.palette.divider}`,
+    background: theme.palette.background.paper,
+  },
+  filterItem: { padding: theme.spacing(1) },
+  applyItem: { padding: theme.spacing(1), display: "flex", alignItems: "flex-end" },
 }));
 
-// Grid width of each widget at md and up; all widgets are full width on phones.
+// Grid width of each widget at md and up; every widget is full width on phones.
 const WIDGET_WIDTH = {
   kpis: 12,
   trend: 8,
   resolutionStatus: 4,
   category: 6,
-  statusByCategory: 6,
   channel: 6,
-  statusByChannel: 6,
-  closureTimeliness: 4,
+  paaLeague: 12,
   closureByPaa: 8,
-  paaSummary: 6,
-  overdueByPaa: 6,
-  statusByPaa: 8,
-  paaWithoutGrievances: 4,
-  topIssues: 12,
+  coverageGap: 4,
 };
+
+// Display order (the filter bar is shared by all of them).
+const WIDGET_ORDER = ["kpis", "trend", "resolutionStatus", "category", "channel", "paaLeague", "closureByPaa", "coverageGap"];
 
 const toISODate = (date) => {
   const pad = (value) => String(value).padStart(2, "0");
@@ -82,33 +83,62 @@ const toISODate = (date) => {
 const defaultFilters = () => {
   const today = new Date();
   const from = new Date(today.getFullYear(), today.getMonth() - 11, 1);
-  return { dateFrom: toISODate(from), dateTo: toISODate(today), period: "MONTH" };
+  return {
+    dateFrom: { id: "dateFrom", value: toISODate(from) },
+    dateTo: { id: "dateTo", value: toISODate(today) },
+    period: { id: "period", value: "MONTH" },
+  };
 };
 
-const buildParams = ({ dateFrom, dateTo, period }) => {
+// Same filter semantics as the report pages: date range, agent and PAA.
+const buildParams = (filters) => {
   const params = [`reports: [${GRIEVANCE_DASHBOARD_REPORTS.map((report) => `"${report}"`).join(", ")}]`];
-  if (dateFrom) params.push(`dateFrom: "${String(dateFrom).slice(0, 10)}"`);
-  if (dateTo) params.push(`dateTo: "${String(dateTo).slice(0, 10)}"`);
+  const dateFrom = normalizeDate(filters.dateFrom?.value);
+  const dateTo = normalizeDate(filters.dateTo?.value);
+  const agentId = normalizeId(filters.agent?.value);
+  const paaId = parseLocationId(filters);
+  const period = filters.period?.value;
+  if (dateFrom) params.push(`dateFrom: "${dateFrom}"`);
+  if (dateTo) params.push(`dateTo: "${dateTo}"`);
+  if (agentId) params.push(`agentId: "${agentId}"`);
+  if (paaId) params.push(`paaId: "${paaId}"`);
   if (period) params.push(`period: "${period}"`);
   return params;
 };
+
+const OPEN_KEYS = ["openCount", "assignedCount", "reassignedCount", "inProgressCount", "escalatedCount"];
 
 function GrievanceDashboard() {
   const classes = useStyles();
   const dispatch = useDispatch();
   const history = useHistory();
   const modulesManager = useModulesManager();
-  const { formatMessage } = useTranslations(MODULE_NAME, modulesManager);
-  const t = formatMessage;
+  const { formatMessage: t } = useTranslations(MODULE_NAME, modulesManager);
 
-  const { fetching, error, sections } = useSelector((state) => ({
-    fetching: state.grievanceSocialProtection?.fetchingGrievanceDashboard,
-    error: state.grievanceSocialProtection?.errorGrievanceDashboard,
-    sections: state.grievanceSocialProtection?.grievanceDashboard || EMPTY_SECTIONS,
-  }), shallowEqual);
+  const { fetching, error, sections } = useSelector(
+    (state) => ({
+      fetching: state.grievanceSocialProtection?.fetchingGrievanceDashboard,
+      error: state.grievanceSocialProtection?.errorGrievanceDashboard,
+      sections: state.grievanceSocialProtection?.grievanceDashboard || EMPTY_SECTIONS,
+    }),
+    shallowEqual,
+  );
 
   const [filters, setFilters] = useState(defaultFilters);
-  const updateFilter = (key) => (value) => setFilters((current) => ({ ...current, [key]: value }));
+  const [stacked, setStacked] = useState({ category: false, channel: false });
+
+  const onChangeFilters = useCallback((updates) => {
+    setFilters((previous) => {
+      const next = { ...previous };
+      updates.forEach(({ id, value, filter }) => {
+        if (!id) return;
+        if (value === null || value === undefined || value === "") delete next[id];
+        else next[id] = { id, value, filter };
+      });
+      return next;
+    });
+  }, []);
+  const setFilter = (id) => (value) => onChangeFilters([{ id, value }]);
 
   const load = useCallback(() => {
     dispatch(fetchGrievanceDashboard(modulesManager, buildParams(filters)));
@@ -123,21 +153,26 @@ function GrievanceDashboard() {
   const openReport = (report) => () =>
     historyPush(modulesManager, history, "grievanceSocialProtection.route.ticketReports", [report]);
 
-  const rows = useCallback((report) => sectionRows(sections, report), [sections]);
-  const emptyLabel = t("grievanceDashboard.empty");
-  const statusLabel = (key) => t(key);
+  const toggle = (id) => (
+    <FormControlLabel
+      control={
+        <Switch
+          size="small"
+          color="primary"
+          checked={stacked[id]}
+          onChange={(event) => setStacked((current) => ({ ...current, [id]: event.target.checked }))}
+        />
+      }
+      label={<Typography variant="caption">{t("grievanceDashboard.byStatus")}</Typography>}
+    />
+  );
 
   const widgets = useMemo(() => {
+    const rows = (report) => sectionRows(sections, report);
     const summary = summaryKpis(rows("SUMMARY"));
-    const openTotal = summary
-      ? ["openCount", "assignedCount", "reassignedCount", "inProgressCount"].reduce(
-          (total, key) => total + (summary[key] || 0),
-          0,
-        )
-      : null;
-    const closure = rows("CLOSURE_TIMELINE_BY_PAA");
-    const paaWithout = paaWithoutGrievancesData(rows("PAA_WITHOUT_GRIEVANCES"));
-    const timeliness = closureTimelinessData(closure).map((item) => ({ ...item, name: t(item.label) }));
+    const openTotal = summary ? OPEN_KEYS.reduce((total, key) => total + (summary[key] || 0), 0) : null;
+    const resolvedWithTimeline = summary ? (summary.resolvedOnTimeCount || 0) + (summary.resolvedLateCount || 0) : 0;
+    const statusLabel = (key) => t(key);
 
     return {
       kpis: {
@@ -149,16 +184,29 @@ function GrievanceDashboard() {
               { id: "open", label: t("grievanceDashboard.kpi.open"), value: formatNumber(openTotal), color: STATUS_COLORS.inProgressCount },
               { id: "closed", label: t("grievanceDashboard.kpi.closed"), value: formatNumber(summary.closedCount), color: STATUS_COLORS.closedCount },
               { id: "escalated", label: t("grievanceDashboard.kpi.escalated"), value: formatNumber(summary.escalatedCount), color: STATUS_COLORS.escalatedCount },
-              { id: "overdue", label: t("grievanceDashboard.kpi.overdue"), value: formatNumber(summary.overdueCount), color: STATUS_COLORS.escalatedCount, caption: t("grievanceDashboard.kpi.overdueCaption") },
+              {
+                id: "overdue",
+                label: t("grievanceDashboard.kpi.overdue"),
+                value: formatNumber(summary.overdueCount),
+                color: STATUS_COLORS.escalatedCount,
+                caption: t("grievanceDashboard.kpi.overdueCaption"),
+              },
+              {
+                id: "avgDays",
+                label: t("grievanceDashboard.kpi.averageClosureDays"),
+                value: formatNumber(summary.averageClosureDays),
+                color: "#9A60B4",
+              },
               {
                 id: "onTime",
                 label: t("grievanceDashboard.kpi.onTimeRate"),
-                value: summary.onTimeRate === null || summary.onTimeRate === undefined ? "—" : `${formatNumber(summary.onTimeRate)}%`,
+                value:
+                  summary.onTimeRate === null || summary.onTimeRate === undefined
+                    ? "—"
+                    : `${formatNumber(summary.onTimeRate)}%`,
                 color: STATUS_COLORS.closedCount,
-                caption: `${formatNumber(summary.resolvedOnTimeCount)} / ${formatNumber((summary.resolvedOnTimeCount || 0) + (summary.resolvedLateCount || 0))}`,
+                caption: `${formatNumber(summary.resolvedOnTimeCount)} / ${formatNumber(resolvedWithTimeline)}`,
               },
-              { id: "avgDays", label: t("grievanceDashboard.kpi.averageClosureDays"), value: formatNumber(summary.averageClosureDays), color: "#9A60B4" },
-              { id: "paaWithout", label: t("grievanceDashboard.kpi.paaWithoutGrievances"), value: formatNumber(summary.paaWithoutGrievancesCount), color: "#8C8C8C" },
             ]}
           />
         ),
@@ -173,34 +221,49 @@ function GrievanceDashboard() {
           />
         ),
       },
+      category: stacked.category
+        ? {
+            data: statusByDimensionData(rows("STATUS_BY_CATEGORY"), "category"),
+            render: (data) => <StackedStatusChart data={data} statusLabel={statusLabel} />,
+          }
+        : {
+            data: dimensionData(rows("CATEGORY"), "category"),
+            render: (data) => <HorizontalBarChart data={data} valueLabel={t("grievanceDashboard.series.grievances")} />,
+          },
+      channel: stacked.channel
+        ? {
+            data: statusByDimensionData(rows("STATUS_BY_CHANNEL"), "channel"),
+            render: (data) => <StackedStatusChart data={data} statusLabel={statusLabel} />,
+          }
+        : {
+            data: dimensionData(rows("CHANNEL"), "channel", { dropEmpty: true }),
+            render: (data) => <DonutChart data={data} />,
+          },
       resolutionStatus: {
         data: dimensionData(rows("RESOLUTION_STATUS"), "status"),
         render: (data) => (
           <HorizontalBarChart data={data} valueLabel={t("grievanceDashboard.series.grievances")} nameWidth={100} />
         ),
       },
-      category: {
-        data: dimensionData(rows("CATEGORY"), "category"),
-        render: (data) => <HorizontalBarChart data={data} valueLabel={t("grievanceDashboard.series.grievances")} />,
-      },
-      statusByCategory: {
-        data: statusByDimensionData(rows("STATUS_BY_CATEGORY"), "category"),
-        render: (data) => <StackedStatusChart data={data} statusLabel={statusLabel} />,
-      },
-      channel: {
-        data: dimensionData(rows("CHANNEL"), "channel", { dropEmpty: true }),
-        render: (data) => <DonutChart data={data} />,
-      },
-      statusByChannel: {
-        data: statusByDimensionData(rows("STATUS_BY_CHANNEL"), "channel"),
-        render: (data) => <StackedStatusChart data={data} statusLabel={statusLabel} />,
-      },
-      closureTimeliness: {
-        data: timeliness,
-        render: (data) => <DonutChart data={data} colorFor={(entry) => TIMELINE_COLORS[entry.key]} />,
+      paaLeague: {
+        data: paaLeagueData(rows("STATUS_BY_PAA"), rows("OVERDUE_BY_PAA")),
+        render: (data) => (
+          <SimpleTable
+            maxHeight={420}
+            columns={[
+              { key: "region", label: t("grievanceDashboard.column.region") },
+              { key: "district", label: t("grievanceDashboard.column.district") },
+              { key: "filed", label: t("grievanceDashboard.column.filed"), numeric: true },
+              { key: "open", label: t("grievanceDashboard.column.open"), numeric: true },
+              { key: "overdue", label: t("grievanceDashboard.column.overdue"), numeric: true },
+              { key: "maxOverdueDays", label: t("grievanceDashboard.column.maxOverdueDays"), numeric: true },
+            ]}
+            rows={data}
+          />
+        ),
       },
       closureByPaa: {
-        data: closureByPaaData(closure),
+        data: closureByPaaData(rows("CLOSURE_TIMELINE_BY_PAA")),
         render: (data) => (
           <HorizontalBarChart
             data={data}
@@ -210,62 +273,24 @@ function GrievanceDashboard() {
           />
         ),
       },
-      paaSummary: {
-        data: paaSummaryData(rows("PAA_SUMMARY")),
-        render: (data) => <HorizontalBarChart data={data} valueLabel={t("grievanceDashboard.series.grievances")} />,
-      },
-      overdueByPaa: {
-        data: overdueByPaaData(rows("OVERDUE_BY_PAA")),
-        render: (data) => (
-          <HorizontalBarChart
-            data={data}
-            valueLabel={t("grievanceDashboard.series.overdue")}
-            color={STATUS_COLORS.escalatedCount}
-          />
-        ),
-      },
-      statusByPaa: {
-        data: statusByPaaData(rows("STATUS_BY_PAA")),
-        render: (data) => (
-          <SimpleTable
-            columns={[
-              { key: "name", label: t("grievanceDashboard.column.paa") },
-              { key: "region", label: t("grievanceDashboard.column.region") },
-              { key: "total", label: t("grievanceDashboard.column.filed"), numeric: true },
-              { key: "openCount", label: t("grievanceDashboard.status.open"), numeric: true },
-              { key: "inProgressCount", label: t("grievanceDashboard.status.inProgress"), numeric: true },
-              { key: "escalatedCount", label: t("grievanceDashboard.status.escalated"), numeric: true },
-              { key: "closedCount", label: t("grievanceDashboard.status.closed"), numeric: true },
-            ]}
-            rows={data}
-          />
-        ),
-      },
-      paaWithoutGrievances: {
-        data: paaWithout,
+      coverageGap: {
+        data: paaWithoutGrievancesData(rows("PAA_WITHOUT_GRIEVANCES")),
         isEmpty: !sections.length,
         render: (data) => (
-          <NameList total={data.length} totalLabel={t("grievanceDashboard.paaWithoutGrievances.caption")} names={data} />
-        ),
-      },
-      topIssues: {
-        data: topIssuesData(rows("CUSTOM")),
-        render: (data) => (
-          <SimpleTable
-            columns={[
-              { key: "title", label: t("grievanceDashboard.column.issue") },
-              { key: "category", label: t("grievanceDashboard.column.category") },
-              { key: "filed", label: t("grievanceDashboard.column.filed"), numeric: true },
-              { key: "closed", label: t("grievanceDashboard.status.closed"), numeric: true },
-              { key: "paaCount", label: t("grievanceDashboard.column.paas"), numeric: true },
-            ]}
-            rows={data}
+          <NameList
+            total={data.length}
+            totalLabel={t("grievanceDashboard.coverageGap.caption")}
+            namesLabel={t("grievanceDashboard.coverageGap.names")}
+            names={data}
           />
         ),
       },
     };
+    // `t` is stable for a given locale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, rows]);
+  }, [sections, stacked]);
+
+  const widgetById = Object.fromEntries(GRIEVANCE_DASHBOARD_WIDGETS.map((widget) => [widget.id, widget]));
 
   return (
     <div className={classes.root}>
@@ -274,32 +299,42 @@ function GrievanceDashboard() {
       </Typography>
       <Typography className={classes.intro}>{t("grievanceDashboard.intro")}</Typography>
 
-      <Grid container spacing={2} className={classes.filters}>
-        <Grid item xs={12} sm={4} md={3}>
+      <Grid container className={classes.filters}>
+        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
           <PublishedComponent
             pubRef="core.DatePicker"
             module={MODULE_NAME}
             label="grievanceReport.dateFrom"
-            value={filters.dateFrom}
-            onChange={updateFilter("dateFrom")}
+            value={filters.dateFrom?.value ?? null}
+            onChange={setFilter("dateFrom")}
           />
         </Grid>
-        <Grid item xs={12} sm={4} md={3}>
+        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
           <PublishedComponent
             pubRef="core.DatePicker"
             module={MODULE_NAME}
             label="grievanceReport.dateTo"
-            value={filters.dateTo}
-            onChange={updateFilter("dateTo")}
+            value={filters.dateTo?.value ?? null}
+            onChange={setFilter("dateTo")}
           />
         </Grid>
-        <Grid item xs={12} sm={4} md={2}>
+        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
+          <PublishedComponent
+            pubRef="admin.UserPicker"
+            module={MODULE_NAME}
+            label={t("grievanceReport.agent")}
+            value={filters.agent?.value ?? null}
+            withNull
+            onChange={setFilter("agent")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
           <TextField
             select
             fullWidth
             label={t("grievanceDashboard.period")}
-            value={filters.period}
-            onChange={(event) => updateFilter("period")(event.target.value)}
+            value={filters.period?.value || "MONTH"}
+            onChange={(event) => setFilter("period")(event.target.value)}
           >
             {GRIEVANCE_DASHBOARD_PERIODS.map((period) => (
               <MenuItem key={period} value={period}>
@@ -308,8 +343,24 @@ function GrievanceDashboard() {
             ))}
           </TextField>
         </Grid>
-        <Grid item xs={12} md={2}>
-          <Button variant="contained" color="primary" startIcon={<RefreshIcon />} onClick={load} disabled={!!fetching}>
+        <Grid item xs={12} md={10} className={classes.filterItem}>
+          <PublishedComponent
+            pubRef="location.DetailedLocationFilter"
+            withNull
+            filters={filters}
+            onChangeFilters={onChangeFilters}
+            anchor="paa"
+          />
+        </Grid>
+        <Grid item xs={12} md={2} className={classes.applyItem}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            startIcon={<RefreshIcon />}
+            onClick={load}
+            disabled={!!fetching}
+          >
             {t("grievanceDashboard.apply")}
           </Button>
         </Grid>
@@ -319,19 +370,23 @@ function GrievanceDashboard() {
 
       {!fetching && !error && (
         <Grid container spacing={2}>
-          {GRIEVANCE_DASHBOARD_WIDGETS.map((widget) => {
-            const config = widgets[widget.id];
-            const data = config.data;
+          {WIDGET_ORDER.map((id) => {
+            const widget = widgetById[id];
+            const config = widgets[id];
+            const { data } = config;
             const isEmpty = config.isEmpty ?? (Array.isArray(data) ? data.length === 0 : !data);
+            const canStack = Boolean(widget.stackedLinkReport);
+            const linkReport = canStack && stacked[id] ? widget.stackedLinkReport : widget.linkReport;
             return (
-              <Grid item xs={12} md={WIDGET_WIDTH[widget.id] || 6} key={widget.id}>
+              <Grid item xs={12} md={WIDGET_WIDTH[id] || 6} key={id}>
                 <WidgetCard
-                  title={t(`grievanceDashboard.widget.${widget.id}`)}
-                  subtitle={t(`grievanceDashboard.widget.${widget.id}.subtitle`)}
-                  onOpenReport={widget.linkReport ? openReport(widget.linkReport) : null}
+                  title={t(`grievanceDashboard.widget.${id}`)}
+                  subtitle={t(`grievanceDashboard.widget.${id}.subtitle${canStack && stacked[id] ? ".stacked" : ""}`)}
+                  actions={canStack ? toggle(id) : null}
+                  onOpenReport={linkReport ? openReport(linkReport) : null}
                   openReportLabel={t("grievanceDashboard.openReport")}
                   isEmpty={isEmpty}
-                  emptyLabel={emptyLabel}
+                  emptyLabel={t("grievanceDashboard.empty")}
                 >
                   {!isEmpty && config.render(data)}
                 </WidgetCard>

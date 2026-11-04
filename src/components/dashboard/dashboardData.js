@@ -10,12 +10,6 @@ export const STATUS_SERIES = [
   { key: "closedCount", label: "grievanceDashboard.status.closed" },
 ];
 
-export const TIMELINE_SERIES = [
-  { key: "ON_TIME", label: "grievanceDashboard.timeline.onTime" },
-  { key: "RESOLVED_LATE", label: "grievanceDashboard.timeline.late" },
-  { key: "N_A", label: "grievanceDashboard.timeline.noTimeline" },
-];
-
 const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
 
 const round = (value, digits = 1) => {
@@ -25,13 +19,6 @@ const round = (value, digits = 1) => {
 
 const statusTotals = (row) =>
   STATUS_SERIES.reduce((totals, { key }) => ({ ...totals, [key]: num(row[key]) }), {});
-
-const sumStatus = (target, row) => {
-  STATUS_SERIES.forEach(({ key }) => {
-    target[key] = num(target[key]) + num(row[key]);
-  });
-  return target;
-};
 
 export function sectionRows(sections, report) {
   const section = (sections || []).find((item) => item.report === report);
@@ -73,19 +60,6 @@ export function statusByDimensionData(rows, field) {
     .filter((item) => item.total > 0);
 }
 
-export function closureTimelinessData(rows) {
-  const counts = rows.reduce((acc, row) => {
-    const key = row.timelineStatus || "N_A";
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-  return TIMELINE_SERIES.map(({ key, label }) => ({
-    key,
-    label,
-    value: counts[key] || 0,
-  })).filter((item) => item.value > 0);
-}
-
 export function closureByPaaData(rows, limit = 10) {
   const groups = new Map();
   rows.forEach((row) => {
@@ -106,45 +80,34 @@ export function closureByPaaData(rows, limit = 10) {
     .slice(0, limit);
 }
 
-export function paaSummaryData(rows, limit = 10) {
-  return rows
-    .map((row) => ({
-      name: row.districtName || row.paaName || row.label,
-      region: row.regionName,
-      value: num(row.grievancesFiled) || num(row.count),
-    }))
-    .filter((item) => item.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, limit);
-}
-
-// STATUS_BY_PAA rows are per PAA and category; the widget shows one row per PAA.
-export function statusByPaaData(rows, limit = 10) {
+// PAA league table: STATUS_BY_PAA rows are per PAA and category, so they are
+// summed per PAA, then joined with OVERDUE_BY_PAA on the PAA id.
+export function paaLeagueData(statusRows, overdueRows) {
   const groups = new Map();
-  rows.forEach((row) => {
+  statusRows.forEach((row) => {
     const key = row.paaId || row.paaName || "unassigned";
     const group = groups.get(key) || {
-      name: row.paaName || row.districtName || key,
+      key,
       region: row.regionName,
-      total: 0,
+      district: row.districtName || row.paaName || key,
+      filed: 0,
+      closed: 0,
+      overdue: 0,
+      maxOverdueDays: 0,
     };
-    sumStatus(group, row);
-    group.total += num(row.grievancesFiled);
+    group.filed += num(row.grievancesFiled);
+    group.closed += num(row.closedCount);
     groups.set(key, group);
   });
-  return [...groups.values()].sort((a, b) => b.total - a.total).slice(0, limit);
-}
-
-export function overdueByPaaData(rows, limit = 10) {
-  return rows
-    .map((row) => ({
-      name: row.paaName || row.label,
-      value: num(row.count),
-      maxOverdueDays: num(row.overdueDays),
-    }))
-    .filter((item) => item.value > 0)
-    .sort((a, b) => b.value - a.value || b.maxOverdueDays - a.maxOverdueDays)
-    .slice(0, limit);
+  overdueRows.forEach((row) => {
+    const group = groups.get(row.paaId || row.paaName);
+    if (!group) return;
+    group.overdue = num(row.count);
+    group.maxOverdueDays = num(row.overdueDays);
+  });
+  return [...groups.values()]
+    .map((group) => ({ ...group, open: group.filed - group.closed }))
+    .sort((a, b) => b.filed - a.filed || b.overdue - a.overdue);
 }
 
 export function paaWithoutGrievancesData(rows) {
@@ -152,28 +115,4 @@ export function paaWithoutGrievancesData(rows) {
     .map((row) => row.paaName || row.label)
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
-}
-
-// CUSTOM rows are per PAA, category and title; top issues merge PAAs.
-export function topIssuesData(rows, limit = 10) {
-  const groups = new Map();
-  rows.forEach((row) => {
-    const title = row.ticketTitle || row.label;
-    const key = `${row.category || ""}\u0000${title}`;
-    const group = groups.get(key) || {
-      title,
-      category: row.category,
-      filed: 0,
-      closed: 0,
-      paas: new Set(),
-    };
-    group.filed += num(row.grievancesFiled);
-    group.closed += num(row.closedCount);
-    if (row.paaName) group.paas.add(row.paaName);
-    groups.set(key, group);
-  });
-  return [...groups.values()]
-    .map(({ paas, ...group }) => ({ ...group, paaCount: paas.size }))
-    .sort((a, b) => b.filed - a.filed)
-    .slice(0, limit);
 }

@@ -130,18 +130,18 @@ function safeDecodeId(id) {
   }
 }
 
-function normalizeId(value) {
+export function normalizeId(value) {
   if (!value) return null;
   return safeDecodeId(value.id || value.uuid || value);
 }
 
-function normalizeDate(value) {
+export function normalizeDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return String(value).slice(0, 10);
 }
 
-function parseLocationId(filters) {
+export function parseLocationId(filters) {
   const values = Object.values(filters || {});
   const locationFilter =
     values.find(({ id, value }) => id === "paa" && value) ||

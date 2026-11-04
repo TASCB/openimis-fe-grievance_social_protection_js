@@ -50,12 +50,6 @@ export const STATUS_COLORS = {
   closedCount: "#3BA272",
 };
 
-export const TIMELINE_COLORS = {
-  ON_TIME: "#3BA272",
-  RESOLVED_LATE: "#D9534F",
-  N_A: "#9E9E9E",
-};
-
 const useStyles = makeStyles((theme) => ({
   card: {
     height: "100%",
@@ -73,6 +67,7 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1),
     marginBottom: theme.spacing(1.5),
   },
+  headerActions: { display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" },
   title: { fontWeight: 600, fontSize: "1rem" },
   subtitle: { color: theme.palette.text.secondary, fontSize: "0.8rem" },
   body: { flex: 1, minHeight: 0 },
@@ -103,14 +98,23 @@ const useStyles = makeStyles((theme) => ({
   kpiCaption: { fontSize: "0.75rem", color: theme.palette.text.secondary },
   chips: { display: "flex", flexWrap: "wrap", gap: theme.spacing(0.5), maxHeight: 240, overflowY: "auto" },
   bigNumber: { fontSize: "2.2rem", fontWeight: 700, lineHeight: 1 },
-  tableWrap: { overflowX: "auto" },
+  tableWrap: { overflow: "auto" },
   numberCell: { textAlign: "right", fontVariantNumeric: "tabular-nums" },
 }));
 
 const formatNumber = (value) =>
   typeof value === "number" ? value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—";
 
-export function WidgetCard({ title, subtitle, onOpenReport, openReportLabel, isEmpty, emptyLabel, children }) {
+export function WidgetCard({
+  title,
+  subtitle,
+  actions,
+  onOpenReport,
+  openReportLabel,
+  isEmpty,
+  emptyLabel,
+  children,
+}) {
   const classes = useStyles();
   return (
     <Paper className={classes.card}>
@@ -119,11 +123,14 @@ export function WidgetCard({ title, subtitle, onOpenReport, openReportLabel, isE
           <Typography className={classes.title}>{title}</Typography>
           {subtitle && <Typography className={classes.subtitle}>{subtitle}</Typography>}
         </div>
-        {onOpenReport && (
-          <Button size="small" color="primary" endIcon={<OpenInNewIcon fontSize="small" />} onClick={onOpenReport}>
-            {openReportLabel}
-          </Button>
-        )}
+        <div className={classes.headerActions}>
+          {actions}
+          {onOpenReport && (
+            <Button size="small" color="primary" endIcon={<OpenInNewIcon fontSize="small" />} onClick={onOpenReport}>
+              {openReportLabel}
+            </Button>
+          )}
+        </div>
       </div>
       <div className={classes.body}>{isEmpty ? <div className={classes.empty}>{emptyLabel}</div> : children}</div>
     </Paper>
@@ -227,11 +234,11 @@ export function DonutChart({ data, colorFor }) {
   );
 }
 
-export function SimpleTable({ columns, rows }) {
+export function SimpleTable({ columns, rows, maxHeight }) {
   const classes = useStyles();
   return (
-    <div className={classes.tableWrap}>
-      <Table size="small">
+    <div className={classes.tableWrap} style={maxHeight ? { maxHeight } : undefined}>
+      <Table size="small" stickyHeader={!!maxHeight}>
         <TableHead>
           <TableRow>
             {columns.map((column) => (
@@ -257,7 +264,7 @@ export function SimpleTable({ columns, rows }) {
   );
 }
 
-export function NameList({ total, totalLabel, names }) {
+export function NameList({ total, totalLabel, names, namesLabel }) {
   const classes = useStyles();
   return (
     <div>
@@ -265,6 +272,11 @@ export function NameList({ total, totalLabel, names }) {
       <Typography className={classes.kpiCaption} gutterBottom>
         {totalLabel}
       </Typography>
+      {names.length > 0 && namesLabel && (
+        <Typography className={classes.kpiCaption} gutterBottom>
+          {namesLabel}
+        </Typography>
+      )}
       <div className={classes.chips}>
         {names.map((name) => (
           <Chip key={name} label={name} size="small" variant="outlined" />
