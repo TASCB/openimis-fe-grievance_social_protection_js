@@ -16,6 +16,7 @@ import { CLEAR, ERROR, REQUEST, SUCCESS } from "./utils/action-type";
 export const ACTION_TYPE = {
   GET_GRIEVANCE_CONFIGURATION: "GET_GRIEVANCE_CONFIGURATION",
   GRIEVANCE_REPORTS: "GRIEVANCE_REPORTS",
+  GRIEVANCE_DASHBOARD: "GRIEVANCE_DASHBOARD",
   EXPORT_GRIEVANCE_REPORTS: "EXPORT_GRIEVANCE_REPORTS",
   MUTATION: "GRIEVANCE_SOCIAL_PROTECTION_MUTATION",
   CLOSE_TICKET: "CLOSE_TICKET",
@@ -101,6 +102,11 @@ function reducer(
     fetchedGrievanceReports: false,
     errorGrievanceReports: null,
     grievanceReports: [],
+
+    fetchingGrievanceDashboard: false,
+    fetchedGrievanceDashboard: false,
+    errorGrievanceDashboard: null,
+    grievanceDashboard: [],
 
     submittingMutation: false,
     mutation: {},
@@ -543,6 +549,29 @@ function reducer(
         fetchedGrievanceReports: false,
         errorGrievanceReports: formatServerError(action.payload),
         grievanceReports: [],
+      };
+    case REQUEST(ACTION_TYPE.GRIEVANCE_DASHBOARD):
+      return {
+        ...state,
+        fetchingGrievanceDashboard: true,
+        fetchedGrievanceDashboard: false,
+        errorGrievanceDashboard: null,
+      };
+    case SUCCESS(ACTION_TYPE.GRIEVANCE_DASHBOARD):
+      return {
+        ...state,
+        fetchingGrievanceDashboard: false,
+        fetchedGrievanceDashboard: true,
+        errorGrievanceDashboard: formatGraphQLError(action.payload),
+        grievanceDashboard: action.payload?.data?.grievanceDashboard || [],
+      };
+    case ERROR(ACTION_TYPE.GRIEVANCE_DASHBOARD):
+      return {
+        ...state,
+        fetchingGrievanceDashboard: false,
+        fetchedGrievanceDashboard: false,
+        errorGrievanceDashboard: formatServerError(action.payload),
+        grievanceDashboard: [],
       };
     case REQUEST(ACTION_TYPE.MUTATION):
       return dispatchMutationReq(state, action);

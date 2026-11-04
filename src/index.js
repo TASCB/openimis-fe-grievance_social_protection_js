@@ -2,7 +2,7 @@
 /* eslint-disable camelcase */
 /* eslint-disable import/prefer-default-export */
 import React from "react";
-import { Add, ListAlt } from "@material-ui/icons";
+import { Add, Dashboard, ListAlt } from "@material-ui/icons";
 import { FormattedMessage } from "@openimis/fe-core";
 import messages_en from "./translations/en.json";
 import reducer from "./reducer";
@@ -29,6 +29,7 @@ import TicketChannelsPage from "./pages/TicketChannelsPage";
 import GrievanceTypesSearcher from "./components/GrievanceTypesSearcher";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
 import TicketReportPage from "./pages/TicketReportPage";
+import GrievanceDashboardPage from "./pages/GrievanceDashboardPage";
 import CreateTicketCategoryPage from "./pages/CreateTicketCategoryPage";
 import ViewTicketCategoryPage from "./pages/ViewTicketCategoryPage";
 import EditTicketCategoryPage from "./pages/EditTicketCategoryPage";
@@ -57,6 +58,7 @@ const ROUTE_TICKET_CATEGORIES_CREATE = "ticket/categories/create";
 const ROUTE_TICKET_CATEGORY = "ticket/categories/category";
 const ROUTE_TICKET_CATEGORY_EDIT = "ticket/categories/category/edit";
 const ROUTE_TICKET_REPORTS = "ticket/reports";
+const ROUTE_TICKET_DASHBOARD = "ticket/dashboard";
 
 const DEFAULT_CONFIG = {
   translations: [
@@ -129,6 +131,14 @@ const DEFAULT_CONFIG = {
       ref: ROUTE_TICKET_CATEGORY_EDIT,
     },
     {
+      key: "grievanceSocialProtection.route.ticketReports",
+      ref: ROUTE_TICKET_REPORTS,
+    },
+    {
+      key: "grievanceSocialProtection.route.ticketDashboard",
+      ref: ROUTE_TICKET_DASHBOARD,
+    },
+    {
       key: "grievanceSocialProtection.route.ticketSearcher",
       ref: TicketSearcher,
     },
@@ -198,6 +208,7 @@ const DEFAULT_CONFIG = {
     { path: `${ROUTE_TICKET_CATEGORY}/:category_id`, component: ViewTicketCategoryPage },
     { path: `${ROUTE_TICKET_CATEGORY_EDIT}/:category_id`, component: EditTicketCategoryPage },
     { path: `${ROUTE_TICKET_REPORTS}/:report?`, component: TicketReportPage },
+    { path: `${ROUTE_TICKET_DASHBOARD}`, component: GrievanceDashboardPage },
   ],
   "core.MainMenu": [
     {
@@ -240,6 +251,13 @@ const DEFAULT_CONFIG = {
       route: `/${ROUTE_TICKET_CHANNELS}`,
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
       id: "grievance.channels",
+    },
+    {
+      text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.dashboard" />,
+      icon: <Dashboard />,
+      route: `/${ROUTE_TICKET_DASHBOARD}`,
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.dashboard",
     },
     ...GRIEVANCE_REPORT_OPTIONS.map((option) => ({
       text: <FormattedMessage module={MODULE_NAME} id={option.label} />,

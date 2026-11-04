@@ -26,6 +26,7 @@ export default {
     "history",
     "jspdf",
     "jspdf-autotable",
+    "recharts",
     /^lodash.*/,
     "moment",
     "prop-types",

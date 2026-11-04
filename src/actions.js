@@ -214,6 +214,51 @@ export function fetchGrievanceReports(mm, params) {
   ]);
 }
 
+const GRIEVANCE_DASHBOARD_ROW_PROJECTION = () => [
+  "label",
+  "count",
+  "category",
+  "channel",
+  "status",
+  "paaId",
+  "paaName",
+  "regionName",
+  "districtName",
+  "ticketTitle",
+  "closureDays",
+  "overdueDays",
+  "timelineStatus",
+  "grievancesFiled",
+  "openCount",
+  "assignedCount",
+  "reassignedCount",
+  "inProgressCount",
+  "closedCount",
+  "escalatedCount",
+  "overdueCount",
+  "resolvedOnTimeCount",
+  "resolvedLateCount",
+  "onTimeRate",
+  "averageClosureDays",
+  "paaWithoutGrievancesCount",
+  "period",
+  "periodStart",
+  "periodEnd",
+  "resolvedCount",
+];
+
+export function fetchGrievanceDashboard(mm, params) {
+  const payload = formatQuery("grievanceDashboard", params, [
+    "report",
+    `rows{${GRIEVANCE_DASHBOARD_ROW_PROJECTION().join(",")}}`,
+  ]);
+  return graphql(payload, [
+    REQUEST(ACTION_TYPE.GRIEVANCE_DASHBOARD),
+    SUCCESS(ACTION_TYPE.GRIEVANCE_DASHBOARD),
+    ERROR(ACTION_TYPE.GRIEVANCE_DASHBOARD),
+  ]);
+}
+
 export function fetchGrievanceReportsForExport(mm, params) {
   const payload = formatQuery("grievanceReports", params, GRIEVANCE_REPORT_PROJECTION());
   return graphql(payload, [
