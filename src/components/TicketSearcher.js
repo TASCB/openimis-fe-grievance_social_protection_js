@@ -26,6 +26,8 @@ import EditIcon from "@material-ui/icons/Edit";
 import { MODULE_NAME, RIGHT_TICKET_EDIT } from "../constants";
 import { fetchTicketSummaries, resolveTicket } from "../actions";
 import { isEmptyObject } from "../utils/utils";
+import { isHouseholdReporterType } from "../utils/externalReporter";
+import { householdLabel } from "../pickers/HouseholdComplainantPicker";
 import { formatTimelineStatus, formatTimeTaken } from "../utils/grievanceMetrics";
 
 import TicketFilter from "./TicketFilter";
@@ -175,6 +177,9 @@ class TicketSearcher extends Component {
           }}
         />
       );
+    }
+    if (isHouseholdReporterType(ticket.reporterTypeName)) {
+      return householdLabel(ticket.reporterHousehold);
     }
     if (ticket.reporterTypeName === "user") {
       return (

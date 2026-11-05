@@ -37,8 +37,15 @@ export function isExternalReporter(ticket = {}) {
   return isExternalReporterType(getReporterType(ticket));
 }
 
+export const HOUSEHOLD_REPORTER_TYPE = 'groupbeneficiary';
+
+export function isHouseholdReporterType(value) {
+  return normalizeReporterType(value) === HOUSEHOLD_REPORTER_TYPE;
+}
+
 export function isKnownRegistryReporterType(value) {
-  return ['individual', 'beneficiary', 'user'].includes(normalizeReporterType(value));
+  return ['individual', 'beneficiary', 'user', HOUSEHOLD_REPORTER_TYPE]
+    .includes(normalizeReporterType(value));
 }
 
 export function isUsablePhone(phone) {

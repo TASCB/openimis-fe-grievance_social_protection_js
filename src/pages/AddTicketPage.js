@@ -32,7 +32,10 @@ import {
   externalReporterValidationErrorIds,
   isExternalReporterType,
   isKnownRegistryReporterType,
+  HOUSEHOLD_REPORTER_TYPE,
 } from "../utils/externalReporter";
+import HouseholdComplainantPicker from "../pickers/HouseholdComplainantPicker";
+import HouseholdComplainantFields from "../components/HouseholdComplainantFields";
 import { descriptionValidationErrorId } from "../utils/descriptionValidation";
 
 const styles = (theme) => ({
@@ -244,8 +247,23 @@ class AddTicketPage extends Component {
   };
 
   updateBenefitPlan = (field, value) => {
-    this.updateAttribute("reporter", null);
-    this.setState((state) => ({ benefitPlan: value }));
+    this.setState((state) => ({
+      isSaved: false,
+      benefitPlan: value,
+      stateEdited: { ...state.stateEdited, reporter: null, reporterType: "beneficiary" },
+    }));
+  };
+
+  updateHousehold = (household) => {
+    this.setState((state) => ({
+      isSaved: false,
+      validationErrors: [],
+      stateEdited: {
+        ...state.stateEdited,
+        reporter: household,
+        reporterType: household ? HOUSEHOLD_REPORTER_TYPE : "beneficiary",
+      },
+    }));
   };
 
   updateExternalReporter = (ticket) => {
@@ -425,6 +443,7 @@ class AddTicketPage extends Component {
                     <Grid item xs={3} className={classes.item}>
                       <PublishedComponent
                         pubRef="socialProtection.BenefitPlanPicker"
+                        type="EVERY_TYPE"
                         withNull
                         label="socialProtection.benefitPlan"
                         value={benefitPlan}
@@ -432,7 +451,18 @@ class AddTicketPage extends Component {
                         readOnly={isSaved}
                       />
                     </Grid>
-                    {benefitPlan && (
+                    {benefitPlan?.type === "GROUP" && (
+                      <Grid item xs={4} className={classes.item}>
+                        <HouseholdComplainantPicker
+                          value={stateEdited.reporter}
+                          label="Complainant"
+                          onChange={this.updateHousehold}
+                          benefitPlan={benefitPlan}
+                          readOnly={isSaved}
+                        />
+                      </Grid>
+                    )}
+                    {benefitPlan && benefitPlan.type !== "GROUP" && (
                       <Grid item xs={3} className={classes.item}>
                         <PublishedComponent
                           pubRef="socialProtection.BeneficiaryPicker"
@@ -518,7 +548,10 @@ class AddTicketPage extends Component {
                     </Grid>
                   </>
                 )}
-                {grievantType === "beneficiary" && (
+                {grievantType === "beneficiary" && benefitPlan?.type === "GROUP" && (
+                  <HouseholdComplainantFields household={stateEdited.reporter} className={classes.item} />
+                )}
+                {grievantType === "beneficiary" && benefitPlan?.type !== "GROUP" && (
                   <>
                     <Grid item xs={4} className={classes.item}>
                       <TextInput

@@ -11,7 +11,8 @@ import {
   useTranslations, useModulesManager,
 } from '@openimis/fe-core';
 import { EMPTY_STRING, MODULE_NAME } from '../constants';
-import { isExternalReporterType } from '../utils/externalReporter';
+import { isExternalReporterType, isHouseholdReporterType } from '../utils/externalReporter';
+import { householdLabel } from '../pickers/HouseholdComplainantPicker';
 
 const useStyles = makeStyles(() => ({
   topHeader: {
@@ -178,6 +179,12 @@ const TicketPrintTemplate = forwardRef(({ ticket, reporter }, ref) => {
           <p className={classes.detailValue}>
             {reporter?.jsonExt?.national_id ?? ''}
           </p>
+        </div>
+        )}
+        {isHouseholdReporterType(ticket.reporterTypeName) && (
+        <div className={classes.detailRow}>
+          <p className={classes.detailName}>{formatMessage('ticket.template.reporter')}</p>
+          <p className={classes.detailValue}>{householdLabel(ticket.reporterHousehold)}</p>
         </div>
         )}
         {ticket.reporterTypeName === null && (

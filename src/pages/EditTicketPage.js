@@ -48,8 +48,12 @@ import {
   externalReporterValidationErrorIds,
   getReporterType,
   isExternalReporterType,
+  isHouseholdReporterType,
   parseSerializedReporter,
+  HOUSEHOLD_REPORTER_TYPE,
 } from '../utils/externalReporter';
+import HouseholdComplainantPicker from '../pickers/HouseholdComplainantPicker';
+import HouseholdComplainantFields from '../components/HouseholdComplainantFields';
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -206,8 +210,31 @@ class EditTicketPage extends Component {
   };
 
   updateBenefitPlan = (field, value) => {
-    this.updateAttribute('reporter', null);
-    this.setState({ benefitPlan: value });
+    this.setState((state) => ({
+      validationErrors: [],
+      benefitPlan: value,
+      stateEdited: {
+        ...state.stateEdited,
+        reporter: null,
+        reporterHousehold: null,
+        reporterType: 'beneficiary',
+        reporterTypeName: 'beneficiary',
+      },
+    }));
+  };
+
+  updateHousehold = (household) => {
+    const type = household ? HOUSEHOLD_REPORTER_TYPE : 'beneficiary';
+    this.setState((state) => ({
+      validationErrors: [],
+      stateEdited: {
+        ...state.stateEdited,
+        reporter: household,
+        reporterHousehold: household,
+        reporterType: type,
+        reporterTypeName: type,
+      },
+    }));
   };
 
   updateExternalReporter = (ticket) => {
@@ -267,6 +294,8 @@ class EditTicketPage extends Component {
       stateEdited, reporter, comments, benefitPlan, validationErrors,
     } = this.state;
     const reporterType = getReporterType(stateEdited);
+    const isHousehold = isHouseholdReporterType(reporterType);
+    const grievantType = isHousehold ? 'beneficiary' : reporterType;
     const reporterPickerValue = typeof stateEdited.reporter === 'string'
       ? reporter
       : stateEdited.reporter || reporter;
@@ -291,7 +320,7 @@ class EditTicketPage extends Component {
                     label="type"
                     readOnly={propsReadOnly}
                     withNull
-                    value={(reporterType ?? '').toString().replace(/\s+/g, '')}
+                    value={(grievantType ?? '').toString().replace(/\s+/g, '')}
                     onChange={(v) => this.updateTypeOfGrievant('grievantType', v)}
                     withLabel
                   />
@@ -322,12 +351,13 @@ class EditTicketPage extends Component {
                   </Grid>
                 </>
                 )}
-                {reporterType === 'beneficiary' && (
+                {grievantType === 'beneficiary' && (
                 <>
                   {!propsReadOnly && (
                   <Grid item xs={12} sm={6} md={3} className={classes.item}>
                     <PublishedComponent
                       pubRef="socialProtection.BenefitPlanPicker"
+                      type="EVERY_TYPE"
                       withNull
                       label="socialProtection.benefitPlan"
                       value={benefitPlan}
@@ -336,7 +366,17 @@ class EditTicketPage extends Component {
                     />
                   </Grid>
                   )}
-                  {(benefitPlan || propsReadOnly) && (
+                  {!propsReadOnly && benefitPlan?.type === 'GROUP' && (
+                  <Grid item xs={12} sm={6} md={4} className={classes.item}>
+                    <HouseholdComplainantPicker
+                      value={stateEdited.reporterHousehold || null}
+                      label="Complainant"
+                      onChange={this.updateHousehold}
+                      benefitPlan={benefitPlan}
+                    />
+                  </Grid>
+                  )}
+                  {((benefitPlan && benefitPlan.type !== 'GROUP') || (propsReadOnly && !isHousehold)) && (
                   <Grid item xs={12} sm={6} md={3} className={classes.item}>
                     <PublishedComponent
                       pubRef="socialProtection.BeneficiaryPicker"
@@ -419,6 +459,12 @@ class EditTicketPage extends Component {
                     />
                   </Grid>
                 </>
+                )}
+                {isHousehold && (
+                <HouseholdComplainantFields
+                  household={stateEdited.reporterHousehold}
+                  className={classes.item}
+                />
                 )}
                 {reporterType === 'beneficiary' && propsReadOnly && (
                 <PublishedComponent
