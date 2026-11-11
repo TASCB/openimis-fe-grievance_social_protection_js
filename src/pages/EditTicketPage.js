@@ -34,6 +34,7 @@ import { Save } from '@material-ui/icons';
 import { closeTicket, updateTicket, fetchTicket } from '../actions';
 import {
   EMPTY_STRING,
+  LEGACY_REPORTER_TYPE,
   MODULE_NAME,
   RIGHT_TICKET_EDIT,
   RIGHT_TICKET_RESOLVE,
@@ -49,11 +50,14 @@ import {
   getReporterType,
   isExternalReporterType,
   isHouseholdReporterType,
+  isLegacyReporterType,
   parseSerializedReporter,
   HOUSEHOLD_REPORTER_TYPE,
 } from '../utils/externalReporter';
 import HouseholdComplainantPicker from '../pickers/HouseholdComplainantPicker';
 import HouseholdComplainantFields from '../components/HouseholdComplainantFields';
+import LegacyHouseholdComplainantPicker from '../pickers/LegacyHouseholdComplainantPicker';
+import LegacyHouseholdComplainantFields from '../components/LegacyHouseholdComplainantFields';
 
 const styles = (theme) => ({
   paper: theme.paper.paper,
@@ -237,6 +241,19 @@ class EditTicketPage extends Component {
     }));
   };
 
+  updateLegacyHousehold = (household) => {
+    this.setState((state) => ({
+      validationErrors: [],
+      stateEdited: {
+        ...state.stateEdited,
+        reporter: household,
+        reporterLegacyHousehold: household,
+        reporterType: LEGACY_REPORTER_TYPE,
+        reporterTypeName: LEGACY_REPORTER_TYPE,
+      },
+    }));
+  };
+
   updateExternalReporter = (ticket) => {
     this.setState({
       validationErrors: [],
@@ -295,7 +312,8 @@ class EditTicketPage extends Component {
     } = this.state;
     const reporterType = getReporterType(stateEdited);
     const isHousehold = isHouseholdReporterType(reporterType);
-    const grievantType = isHousehold ? 'beneficiary' : reporterType;
+    const isLegacy = isLegacyReporterType(reporterType);
+    const grievantType = isHousehold ? 'beneficiary' : isLegacy ? LEGACY_REPORTER_TYPE : reporterType;
     const reporterPickerValue = typeof stateEdited.reporter === 'string'
       ? reporter
       : stateEdited.reporter || reporter;
@@ -396,6 +414,15 @@ class EditTicketPage extends Component {
                   )}
                 </>
                 )}
+                {isLegacy && !propsReadOnly && (
+                <Grid item xs={12} sm={6} md={5} className={classes.item}>
+                  <LegacyHouseholdComplainantPicker
+                    value={stateEdited.reporterLegacyHousehold || null}
+                    label="Complainant"
+                    onChange={this.updateLegacyHousehold}
+                  />
+                </Grid>
+                )}
                 {reporterType === 'user' && (
                 <Grid item xs={12} sm={6} md={3} className={classes.item}>
                   <PublishedComponent
@@ -459,6 +486,12 @@ class EditTicketPage extends Component {
                     />
                   </Grid>
                 </>
+                )}
+                {isLegacy && (
+                <LegacyHouseholdComplainantFields
+                  household={stateEdited.reporterLegacyHousehold}
+                  className={classes.item}
+                />
                 )}
                 {isHousehold && (
                 <HouseholdComplainantFields

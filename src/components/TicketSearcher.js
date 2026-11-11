@@ -26,7 +26,8 @@ import EditIcon from "@material-ui/icons/Edit";
 import { MODULE_NAME, RIGHT_TICKET_EDIT } from "../constants";
 import { fetchTicketSummaries, resolveTicket } from "../actions";
 import { isEmptyObject } from "../utils/utils";
-import { isHouseholdReporterType } from "../utils/externalReporter";
+import { isHouseholdReporterType, isLegacyReporterType } from "../utils/externalReporter";
+import { legacyHouseholdLabel } from "../pickers/LegacyHouseholdComplainantPicker";
 import { householdLabel } from "../pickers/HouseholdComplainantPicker";
 import { formatTimelineStatus, formatTimeTaken } from "../utils/grievanceMetrics";
 
@@ -180,6 +181,9 @@ class TicketSearcher extends Component {
     }
     if (isHouseholdReporterType(ticket.reporterTypeName)) {
       return householdLabel(ticket.reporterHousehold);
+    }
+    if (isLegacyReporterType(ticket.reporterTypeName)) {
+      return legacyHouseholdLabel(ticket.reporterLegacyHousehold);
     }
     if (ticket.reporterTypeName === "user") {
       return (

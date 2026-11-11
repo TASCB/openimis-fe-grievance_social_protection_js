@@ -23,7 +23,7 @@ import { TextInput, PublishedComponent, FormattedMessage, SelectInput } from "@o
 import {
   createTicket, fetchGrievanceLocationScope, setPendingAttachments,
 } from "../actions";
-import { EMPTY_STRING, MODULE_NAME } from "../constants";
+import { EMPTY_STRING, LEGACY_REPORTER_TYPE, MODULE_NAME } from "../constants";
 import GrievantTypePicker from "../pickers/GrievantTypePicker";
 import ExternalReporterFields from "../components/ExternalReporterFields";
 import TicketLocationFields from "../components/TicketLocationFields";
@@ -36,6 +36,8 @@ import {
 } from "../utils/externalReporter";
 import HouseholdComplainantPicker from "../pickers/HouseholdComplainantPicker";
 import HouseholdComplainantFields from "../components/HouseholdComplainantFields";
+import LegacyHouseholdComplainantPicker from "../pickers/LegacyHouseholdComplainantPicker";
+import LegacyHouseholdComplainantFields from "../components/LegacyHouseholdComplainantFields";
 import { descriptionValidationErrorId } from "../utils/descriptionValidation";
 
 const styles = (theme) => ({
@@ -476,6 +478,16 @@ class AddTicketPage extends Component {
                     )}
                   </>
                 )}
+                {grievantType === LEGACY_REPORTER_TYPE && (
+                  <Grid item xs={6} className={classes.item}>
+                    <LegacyHouseholdComplainantPicker
+                      value={stateEdited.reporter}
+                      label="Complainant"
+                      onChange={(v) => this.updateAttribute("reporter", v)}
+                      readOnly={isSaved}
+                    />
+                  </Grid>
+                )}
                 {grievantType === "user" && (
                   <Grid item xs={6} className={classes.item}>
                     <PublishedComponent
@@ -547,6 +559,9 @@ class AddTicketPage extends Component {
                       />
                     </Grid>
                   </>
+                )}
+                {grievantType === LEGACY_REPORTER_TYPE && (
+                  <LegacyHouseholdComplainantFields household={stateEdited.reporter} className={classes.item} />
                 )}
                 {grievantType === "beneficiary" && benefitPlan?.type === "GROUP" && (
                   <HouseholdComplainantFields household={stateEdited.reporter} className={classes.item} />

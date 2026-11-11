@@ -15,6 +15,7 @@ import {
   PAA_GRIEVANCE_FILTER_OPTIONS,
   PAA_GRIEVANCE_FILTER_TYPES,
 } from "../constants";
+import GrievantTypePicker from "../pickers/GrievantTypePicker";
 
 const styles = (theme) => ({
   form: { padding: 0 },
@@ -138,6 +139,20 @@ const TicketReportFilter = ({ classes, filters, onChangeFilters, intl }) => {
           anchor="paa"
         />
       </Grid>
+      <ControlledField
+        module={MODULE_NAME}
+        id="grievanceReport.reporterKind"
+        field={
+          <Grid item xs={12} sm={6} md={3} className={classes.item}>
+            <GrievantTypePicker
+              withNull
+              withLabel
+              value={filterValue("reporterKind")}
+              onChange={(value) => updateFilter("reporterKind", value || null)}
+            />
+          </Grid>
+        }
+      />
     </Grid>
   );
 };

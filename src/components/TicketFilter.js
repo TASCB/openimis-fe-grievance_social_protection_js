@@ -16,6 +16,7 @@ import {
 } from "@openimis/fe-core";
 import { MODULE_NAME } from "../constants";
 import GrievanceLocationPicker from "../pickers/GrievanceLocationPicker";
+import GrievantTypePicker from "../pickers/GrievantTypePicker";
 
 const styles = (theme) => ({
   dialogTitle: theme.dialog.title,
@@ -122,6 +123,24 @@ class TicketFilter extends Component {
           }
         />
 
+        <ControlledField
+          module={MODULE_NAME}
+          id="ticket.reporterKind"
+          field={
+            <Grid item xs={3} className={classes.item}>
+              <GrievantTypePicker
+                withNull
+                withLabel
+                value={this._filterValue("reporterKind")}
+                onChange={(v) =>
+                  this.props.onChangeFilters([
+                    { id: "reporterKind", value: v || null, filter: v ? `reporterKind: "${v}"` : null },
+                  ])
+                }
+              />
+            </Grid>
+          }
+        />
         <ControlledField
           module={MODULE_NAME}
           id="ticket.reporter"

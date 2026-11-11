@@ -29,7 +29,8 @@ export const FETCH_INDIVIDUAL_REF = "individual.actions.fetchIndividuals";
 
 export const EMPTY_STRING = "";
 export const EXTERNAL_REPORTER_TYPE = "external";
-export const GRIEVANT_TYPE_LIST = ["individual", "beneficiary", "user", EXTERNAL_REPORTER_TYPE];
+export const LEGACY_REPORTER_TYPE = "legacygroup";
+export const GRIEVANT_TYPE_LIST = ["individual", "beneficiary", LEGACY_REPORTER_TYPE, "user", EXTERNAL_REPORTER_TYPE];
 export const GRIEVANCE_MAIN_MENU_CONTRIBUTION_KEY = "grievance.MainMenu";
 
 export const GRIEVANCE_REPORT_TYPES = {
@@ -37,6 +38,7 @@ export const GRIEVANCE_REPORT_TYPES = {
   STATUS_BY_PAA: "STATUS_BY_PAA",
   STATUS_BY_CATEGORY: "STATUS_BY_CATEGORY",
   STATUS_BY_CHANNEL: "STATUS_BY_CHANNEL",
+  STATUS_BY_TYPE: "STATUS_BY_TYPE",
   CUSTOM: "CUSTOM",
   CATEGORY: "CATEGORY",
   PAA_WITHOUT_GRIEVANCES: "PAA_WITHOUT_GRIEVANCES",
@@ -135,6 +137,10 @@ export const GRIEVANCE_REPORT_OPTIONS = [
   {
     value: GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY,
     label: "grievanceReport.type.statusByCategory",
+  },
+  {
+    value: GRIEVANCE_REPORT_TYPES.STATUS_BY_TYPE,
+    label: "grievanceReport.type.statusByType",
   },
   {
     value: GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL,

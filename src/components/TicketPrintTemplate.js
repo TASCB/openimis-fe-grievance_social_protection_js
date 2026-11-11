@@ -11,8 +11,9 @@ import {
   useTranslations, useModulesManager,
 } from '@openimis/fe-core';
 import { EMPTY_STRING, MODULE_NAME } from '../constants';
-import { isExternalReporterType, isHouseholdReporterType } from '../utils/externalReporter';
+import { isExternalReporterType, isHouseholdReporterType, isLegacyReporterType } from '../utils/externalReporter';
 import { householdLabel } from '../pickers/HouseholdComplainantPicker';
+import { legacyHouseholdLabel } from '../pickers/LegacyHouseholdComplainantPicker';
 
 const useStyles = makeStyles(() => ({
   topHeader: {
@@ -186,6 +187,18 @@ const TicketPrintTemplate = forwardRef(({ ticket, reporter }, ref) => {
           <p className={classes.detailName}>{formatMessage('ticket.template.reporter')}</p>
           <p className={classes.detailValue}>{householdLabel(ticket.reporterHousehold)}</p>
         </div>
+        )}
+        {isLegacyReporterType(ticket.reporterTypeName) && (
+        <>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('grievantType')}</p>
+            <p className={classes.detailValue}>{formatMessage('grievantType.legacygroup')}</p>
+          </div>
+          <div className={classes.detailRow}>
+            <p className={classes.detailName}>{formatMessage('ticket.template.reporter')}</p>
+            <p className={classes.detailValue}>{legacyHouseholdLabel(ticket.reporterLegacyHousehold)}</p>
+          </div>
+        </>
         )}
         {ticket.reporterTypeName === null && (
         <div className={classes.detailRow}>

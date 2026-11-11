@@ -195,6 +195,7 @@ function reportHeading(report, intl, filters) {
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA]: "grievanceReport.title.statusByPaa",
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY]: "grievanceReport.title.statusByCategory",
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL]: "grievanceReport.title.statusByChannel",
+    [GRIEVANCE_REPORT_TYPES.STATUS_BY_TYPE]: "grievanceReport.title.statusByType",
     [GRIEVANCE_REPORT_TYPES.CUSTOM]: "grievanceReport.title.custom",
   };
   const headingId = headingIds[report];
@@ -254,6 +255,12 @@ function reportColumns(report, intl) {
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL]: [
       serialColumn,
       { label: t("grievanceReport.channel"), render: (row) => row.channel },
+      ...statusColumns,
+    ],
+    [GRIEVANCE_REPORT_TYPES.STATUS_BY_TYPE]: [
+      serialColumn,
+      { label: t("grievanceReport.category"), render: (row) => row.category },
+      { label: t("grievanceReport.grievanceType"), render: (row) => row.ticketTitle || row.label },
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.CUSTOM]: [
@@ -394,6 +401,8 @@ function TicketReportSearcher({
     if (dateTo) params.push(`dateTo: "${dateTo}"`);
     if (agentId) params.push(`agentId: "${agentId}"`);
     if (paaId) params.push(`paaId: "${paaId}"`);
+    const reporterKind = filters.reporterKind?.value;
+    if (reporterKind) params.push(`reporterKind: "${reporterKind}"`);
     if (selectedReport === GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES) {
       params.push(`paaGrievanceFilter: "${paaGrievanceFilter}"`);
       if (

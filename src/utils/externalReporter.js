@@ -1,4 +1,4 @@
-import { EXTERNAL_REPORTER_TYPE } from '../constants';
+import { EXTERNAL_REPORTER_TYPE, LEGACY_REPORTER_TYPE } from '../constants';
 
 export const externalReporterLocationFieldNames = {
   region: 'externalReporterRegion',
@@ -43,8 +43,12 @@ export function isHouseholdReporterType(value) {
   return normalizeReporterType(value) === HOUSEHOLD_REPORTER_TYPE;
 }
 
+export function isLegacyReporterType(value) {
+  return normalizeReporterType(value) === LEGACY_REPORTER_TYPE;
+}
+
 export function isKnownRegistryReporterType(value) {
-  return ['individual', 'beneficiary', 'user', HOUSEHOLD_REPORTER_TYPE]
+  return ['individual', 'beneficiary', 'user', HOUSEHOLD_REPORTER_TYPE, LEGACY_REPORTER_TYPE]
     .includes(normalizeReporterType(value));
 }
 
