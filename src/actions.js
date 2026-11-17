@@ -292,6 +292,7 @@ export function fetchTicket(mm, filters) {
     "dateOfIncident",
     "dateCreated",
     "attendingStaff {id, username}",
+    "userCreated {id, username, otherNames, lastName}",
     "version",
     "isHistory,",
     "jsonExt",

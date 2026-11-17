@@ -80,6 +80,22 @@ const PAYMENT_WINDOW_LABELS = {
   NOV_DEC: 'Nov - Dec',
 };
 
+/** The local calendar day of a backend timestamp, which is UTC without a zone: "2026-11-16". */
+const localDay = (timestamp) => {
+  if (!timestamp) return null;
+  const date = new Date(/Z|[+-]\d\d:?\d\d$/.test(timestamp) ? timestamp : `${timestamp}Z`);
+  if (Number.isNaN(date.getTime())) return timestamp.slice(0, 10);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/** The staff member who recorded the grievance: "Rijo Lawrence (RHOS0011)", or the username alone. */
+const filedByLabel = (user) => {
+  if (!user) return EMPTY_STRING;
+  const name = [user.otherNames, user.lastName].filter(Boolean).join(' ');
+  return name ? `${name} (${user.username})` : user.username || EMPTY_STRING;
+};
+
 class EditTicketPage extends Component {
   constructor(props) {
     super(props);
@@ -591,6 +607,26 @@ class EditTicketPage extends Component {
                     required={false}
                     readOnly={propsReadOnly}
                     statuses={this.availableStatuses()}
+                  />
+                </Grid>
+                <Grid item xs={6} className={classes.item}>
+                  <TextInput
+                    module={MODULE_NAME}
+                    label="ticket.filedBy"
+                    value={filedByLabel(stateEdited.userCreated)}
+                    onChange={() => null}
+                    required={false}
+                    readOnly
+                  />
+                </Grid>
+                <Grid item xs={6} className={classes.item}>
+                  <PublishedComponent
+                    pubRef="core.DatePicker"
+                    label="ticket.dateFiled"
+                    value={localDay(stateEdited.dateCreated)}
+                    onChange={() => null}
+                    required={false}
+                    readOnly
                   />
                 </Grid>
                 {!!paymentWindowLabel && (

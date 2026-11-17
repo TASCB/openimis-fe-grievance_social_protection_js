@@ -174,6 +174,8 @@
   "ticket.description.validation.minWords": "Description must contain at least 20 words.",
   "ticket.description.validation.maxWords": "Description must not exceed 45 words.",
   "ticket.consentGiven": "Reporter Consent",
+  "ticket.filedBy": "Filed By",
+  "ticket.dateFiled": "Date Filed",
   "ticket.consent.label": "The reporter has given consent to file this grievance.",
   "ticket.consent.message": "Please confirm that the reporter has agreed for this grievance to be recorded and processed.",
   "ticket.consent.yes": "Yes",
