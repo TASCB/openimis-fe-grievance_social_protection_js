@@ -17,7 +17,7 @@ import GrievanceConfigurationDialog from "./dialogs/GrievanceConfigurationDialog
 import ChannelPicker from "./pickers/ChannelPicker";
 import FlagPicker from "./pickers/FlagsPicker";
 import {
-  GRIEVANCE_REPORT_OPTIONS,
+  GRIEVANCE_REPORTS_TAB,
   MODULE_NAME,
   RIGHT_TICKET_ADD,
   RIGHT_TICKET_SEARCH,
@@ -28,6 +28,7 @@ import TicketTypesPage from "./pages/TicketTypesPage";
 import TicketChannelsPage from "./pages/TicketChannelsPage";
 import GrievanceTypesSearcher from "./components/GrievanceTypesSearcher";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
+import TicketReportSearcher from "./components/TicketReportSearcher";
 import TicketReportPage from "./pages/TicketReportPage";
 import GrievanceDashboardPage from "./pages/GrievanceDashboardPage";
 import CreateTicketCategoryPage from "./pages/CreateTicketCategoryPage";
@@ -191,6 +192,21 @@ const DEFAULT_CONFIG = {
       ref: GrievanceCategoryPicker,
     },
   ],
+  "report.ReportTabs": [
+    {
+      key: "grievance",
+      module: MODULE_NAME,
+      label: "reportTab.grievance",
+      rights: [RIGHT_TICKET_SEARCH],
+      position: 1,
+      reports: GRIEVANCE_REPORTS_TAB.map((value) => ({
+        key: value,
+        label: `grievanceReport.tab.${value}`,
+        component: TicketReportSearcher,
+        props: { initialReport: value },
+      })),
+    },
+  ],
   "core.Router": [
     { path: `${ROUTE_TICKET_TICKETS}`, component: TicketsPage },
     { path: `${ROUTE_TICKET_TICKET}/:ticket_uuid?/:version?`, component: TicketPage },
@@ -217,6 +233,13 @@ const DEFAULT_CONFIG = {
     },
   ],
   "grievance.MainMenu": [
+    {
+      text: <FormattedMessage module={MODULE_NAME} id="reportTab.grievance" />,
+      icon: <ListAlt />,
+      route: "/reports?tab=grievance",
+      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
+      id: "grievance.reportsTab",
+    },
     {
       text: <FormattedMessage module={MODULE_NAME} id="menu.grievance.add" />,
       icon: <Add />,
@@ -259,13 +282,6 @@ const DEFAULT_CONFIG = {
       filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
       id: "grievance.dashboard",
     },
-    ...GRIEVANCE_REPORT_OPTIONS.map((option) => ({
-      text: <FormattedMessage module={MODULE_NAME} id={option.label} />,
-      icon: <ListAlt />,
-      route: `/${ROUTE_TICKET_REPORTS}/${option.value}`,
-      filter: (rights) => rights.includes(RIGHT_TICKET_SEARCH),
-      id: `grievance.reports.${option.value}`,
-    })),
   ],
 };
 
