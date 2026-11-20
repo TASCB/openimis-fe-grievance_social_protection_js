@@ -1,20 +1,23 @@
 import React from "react";
 import { withTheme, withStyles } from "@material-ui/core/styles";
 import { connect } from "react-redux";
+import { Helmet, useModulesManager, useTranslations } from "@openimis/fe-core";
 import TicketReportSearcher from "../components/TicketReportSearcher";
-import { RIGHT_TICKET_SEARCH } from "../constants";
+import { MODULE_NAME, RIGHT_TICKET_SEARCH } from "../constants";
 
 function styles(theme) {
   return {
     page: theme.page,
-    fab: theme.fab,
   };
 }
 
 function TicketReportPage({ classes, match, rights }) {
+  const modulesManager = useModulesManager();
+  const { formatMessage } = useTranslations(MODULE_NAME, modulesManager);
   return (
     rights.includes(RIGHT_TICKET_SEARCH) && (
       <div className={classes.page}>
+        <Helmet title={formatMessage("grievanceReport.title")} />
         <TicketReportSearcher initialReport={match?.params?.report} rights={rights} />
       </div>
     )

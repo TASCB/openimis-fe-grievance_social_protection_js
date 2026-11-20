@@ -1,27 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { connect, useDispatch } from "react-redux";
 import { injectIntl } from "react-intl";
-import { connect } from "react-redux";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@material-ui/core";
-import DescriptionIcon from "@material-ui/icons/Description";
-import GetAppIcon from "@material-ui/icons/GetApp";
-import TableChartIcon from "@material-ui/icons/TableChart";
+import { Button, Divider, Grid, Menu, MenuItem, Paper, Typography } from "@material-ui/core";
 import { withStyles, withTheme } from "@material-ui/core/styles";
-import { ProgressOrError, decodeId, formatMessage, withModulesManager } from "@openimis/fe-core";
+import {
+  ProgressOrError,
+  SearcherPane,
+  Table,
+  coreAlert,
+  decodeId,
+  formatMessage,
+  formatMessageWithValues,
+  withModulesManager,
+} from "@openimis/fe-core";
 import {
   GRIEVANCE_REPORT_OPTIONS,
   GRIEVANCE_REPORT_STATUS_ORDER,
@@ -37,35 +28,12 @@ import { formatTimelineStatus, formatTimeTaken } from "../utils/grievanceMetrics
 
 function styles(theme) {
   return {
-    paper: { ...theme.paper.paper, margin: 0 },
-    paperHeader: { ...theme.paper.header, padding: theme.spacing(1) },
-    item: { padding: theme.spacing(1) },
-    table: {
-      minWidth: 900,
-    },
-    tableContainer: {
-      overflowX: "auto",
-    },
-    reportCell: {
-      paddingTop: theme.spacing(1.5),
-      paddingBottom: theme.spacing(1.5),
-    },
-    emptyRow: {
-      textAlign: "center",
-      padding: theme.spacing(3),
-    },
-    actions: {
-      display: "flex",
-      justifyContent: "flex-end",
-      alignItems: "center",
-      flexWrap: "wrap",
-      paddingTop: theme.spacing(0.5),
-    },
-    exportButton: {
-      marginLeft: theme.spacing(1),
-      marginTop: theme.spacing(0.5),
-      marginBottom: theme.spacing(0.5),
-    },
+    paper: theme.paper.paper,
+    paperHeader: theme.paper.header,
+    paperHeaderTitle: theme.paper.title,
+    paperHeaderAction: { ...theme.paper.action, display: "flex", justifyContent: "flex-end", alignItems: "center" },
+    tableContainer: { overflowX: "auto" },
+    empty: { padding: theme.spacing(3), textAlign: "center" },
   };
 }
 
@@ -202,139 +170,96 @@ function reportHeading(report, intl, filters) {
   let heading = headingId ? formatMessage(intl, MODULE_NAME, headingId) : reportLabel(report, intl);
 
   if (report === GRIEVANCE_REPORT_TYPES.CUSTOM) {
-    const dateFrom = normalizeDate(filters.dateFrom?.value);
-    const dateTo = normalizeDate(filters.dateTo?.value);
-    if (dateFrom && dateTo) heading = `${heading} between ${dateFrom} and ${dateTo}`;
+    const from = normalizeDate(filters.dateFrom?.value);
+    const to = normalizeDate(filters.dateTo?.value);
+    if (from && to) {
+      heading = formatMessageWithValues(intl, MODULE_NAME, "grievanceReport.title.customBetween", { from, to });
+    }
   }
   return heading;
 }
 
 function reportColumns(report, intl) {
-  const t = (id) => formatMessage(intl, MODULE_NAME, id);
-  const serialColumn = {
-    label: t("grievanceReport.serialNumber"),
-    render: (row, rowIndex) => rowIndex + 1,
-  };
+  const col = (id, render, numeric = false) => ({ id, label: formatMessage(intl, MODULE_NAME, id), render, numeric });
   const statusColumns = [
-    { label: t("grievanceReport.grievancesFiled"), render: (row) => row.grievancesFiled },
-    { label: t("grievanceReport.open"), render: (row) => row.openCount },
-    { label: t("grievanceReport.assigned"), render: (row) => row.assignedCount },
-    { label: t("grievanceReport.reassigned"), render: (row) => row.reassignedCount },
-    { label: t("grievanceReport.inProgress"), render: (row) => row.inProgressCount },
-    { label: t("grievanceReport.closed"), render: (row) => row.closedCount },
-    { label: t("grievanceReport.escalated"), render: (row) => row.escalatedCount },
+    col("grievanceReport.grievancesFiled", (row) => row.grievancesFiled, true),
+    col("grievanceReport.open", (row) => row.openCount, true),
+    col("grievanceReport.assigned", (row) => row.assignedCount, true),
+    col("grievanceReport.reassigned", (row) => row.reassignedCount, true),
+    col("grievanceReport.inProgress", (row) => row.inProgressCount, true),
+    col("grievanceReport.closed", (row) => row.closedCount, true),
+    col("grievanceReport.escalated", (row) => row.escalatedCount, true),
   ];
+  const paaName = (row) => row.districtName || row.paaName;
 
   const aggregateColumns = {
     [GRIEVANCE_REPORT_TYPES.PAA_SUMMARY]: [
-      serialColumn,
-      { label: t("grievanceReport.regionName"), render: (row) => row.regionName },
-      {
-        label: t("grievanceReport.districtName"),
-        render: (row) => row.districtName || row.paaName,
-      },
-      {
-        label: t("grievanceReport.numberOfGrievances"),
-        render: (row) => row.grievancesFiled ?? row.count,
-      },
+      col("grievanceReport.regionName", (row) => row.regionName),
+      col("grievanceReport.districtName", paaName),
+      col("grievanceReport.numberOfGrievances", (row) => row.grievancesFiled ?? row.count, true),
     ],
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_PAA]: [
-      serialColumn,
-      {
-        label: t("grievanceReport.paa"),
-        render: (row) => row.districtName || row.paaName,
-      },
-      { label: t("grievanceReport.category"), render: (row) => row.category },
+      col("grievanceReport.paa", paaName),
+      col("grievanceReport.category", (row) => row.category),
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_CATEGORY]: [
-      serialColumn,
-      { label: t("grievanceReport.category"), render: (row) => row.category },
+      col("grievanceReport.category", (row) => row.category),
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_CHANNEL]: [
-      serialColumn,
-      { label: t("grievanceReport.channel"), render: (row) => row.channel },
+      col("grievanceReport.channel", (row) => row.channel),
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.STATUS_BY_TYPE]: [
-      serialColumn,
-      { label: t("grievanceReport.category"), render: (row) => row.category },
-      { label: t("grievanceReport.grievanceType"), render: (row) => row.ticketTitle || row.label },
+      col("grievanceReport.category", (row) => row.category),
+      col("grievanceReport.grievanceType", (row) => row.ticketTitle || row.label),
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.CUSTOM]: [
-      serialColumn,
-      {
-        label: t("grievanceReport.districtName"),
-        render: (row) => row.districtName || row.paaName,
-      },
-      { label: t("grievanceReport.category"), render: (row) => row.category },
-      { label: t("grievanceReport.grievancesTitle"), render: (row) => row.ticketTitle },
+      col("grievanceReport.districtName", paaName),
+      col("grievanceReport.category", (row) => row.category),
+      col("grievanceReport.grievancesTitle", (row) => row.ticketTitle),
       ...statusColumns,
     ],
     [GRIEVANCE_REPORT_TYPES.CATEGORY]: [
-      serialColumn,
-      { label: t("grievanceReport.category"), render: (row) => row.category || row.label },
-      { label: t("grievanceReport.count"), render: (row) => row.count },
+      col("grievanceReport.category", (row) => row.category || row.label),
+      col("grievanceReport.count", (row) => row.count, true),
     ],
     [GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES]: [
-      serialColumn,
-      {
-        label: t("grievanceReport.paa"),
-        render: (row) => row.districtName || row.paaName || row.label,
-      },
-      { label: t("grievanceReport.count"), render: (row) => row.count },
+      col("grievanceReport.paa", (row) => row.districtName || row.paaName || row.label),
+      col("grievanceReport.count", (row) => row.count, true),
     ],
     [GRIEVANCE_REPORT_TYPES.CHANNEL]: [
-      serialColumn,
-      { label: t("grievanceReport.channel"), render: (row) => row.channel || row.label },
-      { label: t("grievanceReport.count"), render: (row) => row.count },
+      col("grievanceReport.channel", (row) => row.channel || row.label),
+      col("grievanceReport.count", (row) => row.count, true),
     ],
     [GRIEVANCE_REPORT_TYPES.RESOLUTION_STATUS]: [
-      serialColumn,
-      { label: t("grievanceReport.status"), render: (row) => row.status || row.label },
-      { label: t("grievanceReport.count"), render: (row) => row.count },
+      col("grievanceReport.status", (row) => row.status || row.label),
+      col("grievanceReport.count", (row) => row.count, true),
     ],
     [GRIEVANCE_REPORT_TYPES.OVERDUE_BY_PAA]: [
-      serialColumn,
-      { label: t("grievanceReport.paa"), render: (row) => row.paaName || row.label },
-      { label: t("grievanceReport.count"), render: (row) => row.count },
-      {
-        label: t("grievanceReport.maxOverdueDays"),
-        render: (row) => formatNumber(row.overdueDays),
-      },
+      col("grievanceReport.paa", (row) => row.paaName || row.label),
+      col("grievanceReport.count", (row) => row.count, true),
+      col("grievanceReport.maxOverdueDays", (row) => formatNumber(row.overdueDays), true),
     ],
   };
 
   if (aggregateColumns[report]) return aggregateColumns[report];
 
   return [
-    serialColumn,
-    { label: t("tickets.code"), render: (row) => row.ticketCode },
-    { label: t("tickets.title"), render: (row) => row.ticketTitle },
-    { label: t("grievanceReport.category"), render: (row) => row.category },
-    { label: t("grievanceReport.paa"), render: (row) => row.paaName },
-    { label: t("grievanceReport.agent"), render: (row) => row.agentName },
-    { label: t("grievanceReport.dateReceived"), render: (row) => formatDate(row.dateReceived) },
-    { label: t("grievanceReport.dateClosed"), render: (row) => formatDate(row.dateClosed) },
-    { label: t("tickets.dueDate"), render: (row) => formatDate(row.dueDate) },
-    {
-      label: t("tickets.overdue"),
-      render: (row) => formatTimelineStatus(intl, row.timelineStatus),
-    },
-    {
-      label: t("tickets.timeTaken"),
-      render: (row) => formatTimeTaken(intl, row.timeTakenSeconds),
-    },
-    {
-      label: t("grievanceReport.closureDays"),
-      render: (row) => formatNumber(row.closureDays),
-    },
-    {
-      label: t("grievanceReport.overdueDays"),
-      render: (row) => formatNumber(row.overdueDays),
-    },
+    col("tickets.code", (row) => row.ticketCode),
+    col("tickets.title", (row) => row.ticketTitle),
+    col("grievanceReport.category", (row) => row.category),
+    col("grievanceReport.paa", (row) => row.paaName),
+    col("grievanceReport.agent", (row) => row.agentName),
+    col("grievanceReport.dateReceived", (row) => formatDate(row.dateReceived)),
+    col("grievanceReport.dateClosed", (row) => formatDate(row.dateClosed)),
+    col("tickets.dueDate", (row) => formatDate(row.dueDate)),
+    col("tickets.overdue", (row) => formatTimelineStatus(intl, row.timelineStatus)),
+    col("tickets.timeTaken", (row) => formatTimeTaken(intl, row.timeTakenSeconds)),
+    col("grievanceReport.closureDays", (row) => formatNumber(row.closureDays), true),
+    col("grievanceReport.overdueDays", (row) => formatNumber(row.overdueDays), true),
   ];
 }
 
@@ -349,23 +274,28 @@ function TicketReportSearcher({
   rights,
 }) {
   const dispatch = useDispatch();
-  const [filters, setFilters] = useState(() => ({
-    ...DEFAULT_FILTERS,
-    report: { id: "report", value: resolveReportType(initialReport) },
-  }));
-  const [exportError, setExportError] = useState(null);
+  const initialFilters = useCallback(
+    () => ({ ...DEFAULT_FILTERS, report: { id: "report", value: resolveReportType(initialReport) } }),
+    [initialReport],
+  );
+  const [filters, setFilters] = useState(initialFilters);
+  const [applied, setApplied] = useState(initialFilters);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportMenu, setExportMenu] = useState(null);
   const [loadedReports, setLoadedReports] = useState(null);
 
-  const selectedReport = normalizeReport(filters.report?.value);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
+  const shownReport = useRef(initialReport);
   useEffect(() => {
+    if (shownReport.current === initialReport) return;
+    shownReport.current = initialReport;
+    const next = initialFilters();
     setLoadedReports(null);
-    setFilters((previousFilters) => ({
-      ...previousFilters,
-      report: { id: "report", value: resolveReportType(initialReport) },
-    }));
-  }, [initialReport]);
+    setFilters(next);
+    setApplied(next);
+  }, [initialReport, initialFilters]);
 
   const onChangeFilters = useCallback((updates) => {
     setFilters((previousFilters) => {
@@ -385,23 +315,32 @@ function TicketReportSearcher({
     });
   }, []);
 
+  const refresh = useCallback(() => setApplied({ ...filtersRef.current }), []);
+  const reset = useCallback(() => {
+    const next = initialFilters();
+    setFilters(next);
+    setApplied(next);
+  }, [initialFilters]);
+
+  const selectedReport = normalizeReport(applied.report?.value);
+
   const queryParams = useMemo(() => {
     const params = [`report: "${selectedReport}"`];
-    const dateFrom = normalizeDate(filters.dateFrom?.value);
-    const dateTo = normalizeDate(filters.dateTo?.value);
-    const agentId = normalizeId(filters.agent?.value);
-    const paaId = parseLocationId(filters);
+    const dateFrom = normalizeDate(applied.dateFrom?.value);
+    const dateTo = normalizeDate(applied.dateTo?.value);
+    const agentId = normalizeId(applied.agent?.value);
+    const paaId = parseLocationId(applied);
     const paaGrievanceFilter =
-      filters.paaGrievanceFilter?.value?.value ||
-      filters.paaGrievanceFilter?.value ||
+      applied.paaGrievanceFilter?.value?.value ||
+      applied.paaGrievanceFilter?.value ||
       PAA_GRIEVANCE_FILTER_TYPES.WITHOUT_GRIEVANCE;
-    const grievanceCount = normalizeNonNegativeInteger(filters.grievanceCount?.value);
+    const grievanceCount = normalizeNonNegativeInteger(applied.grievanceCount?.value);
 
     if (dateFrom) params.push(`dateFrom: "${dateFrom}"`);
     if (dateTo) params.push(`dateTo: "${dateTo}"`);
     if (agentId) params.push(`agentId: "${agentId}"`);
     if (paaId) params.push(`paaId: "${paaId}"`);
-    const reporterKind = filters.reporterKind?.value;
+    const reporterKind = applied.reporterKind?.value;
     if (reporterKind) params.push(`reporterKind: "${reporterKind}"`);
     if (selectedReport === GRIEVANCE_REPORT_TYPES.PAA_WITHOUT_GRIEVANCES) {
       params.push(`paaGrievanceFilter: "${paaGrievanceFilter}"`);
@@ -413,7 +352,7 @@ function TicketReportSearcher({
       }
     }
     return params;
-  }, [filters, selectedReport]);
+  }, [applied, selectedReport]);
 
   const fetchReports = useCallback(async () => {
     const response = await dispatch(fetchGrievanceReports(modulesManager, queryParams));
@@ -431,22 +370,26 @@ function TicketReportSearcher({
     [loadedReports, reports, selectedReport],
   );
   const reportTitle = useMemo(
-    () => reportHeading(selectedReport, intl, filters),
-    [filters, intl, selectedReport],
+    () => reportHeading(selectedReport, intl, applied),
+    [applied, intl, selectedReport],
   );
+
+  const showError = useCallback(
+    (message) =>
+      dispatch(coreAlert(formatMessage(intl, MODULE_NAME, "grievanceReport.error"), message)),
+    [dispatch, intl],
+  );
+
   const handleExport = useCallback(
     async (format) => {
+      setExportMenu(null);
       if (orderedReports.length === 0) {
-        setExportError(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
+        showError(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
         return;
       }
-
       try {
         setIsExporting(true);
-
-        const response = await dispatch(
-          fetchGrievanceReportsForExport(modulesManager, queryParams),
-        );
+        const response = await dispatch(fetchGrievanceReportsForExport(modulesManager, queryParams));
         const graphQLErrors = response?.payload?.errors;
         if (graphQLErrors?.length) {
           throw new Error(
@@ -456,37 +399,22 @@ function TicketReportSearcher({
               .join(", "),
           );
         }
-
         const responseRows = response?.payload?.data?.grievanceReports;
         const exportRows = orderReportRows(
           selectedReport,
           Array.isArray(responseRows) ? responseRows : orderedReports,
         );
-
         if (!exportRows || exportRows.length === 0) {
           throw new Error(formatMessage(intl, MODULE_NAME, "grievanceReport.noResults"));
         }
-
         await exportReport(format, reportTitle, selectedReport, columns, exportRows);
-        setExportError(null);
-        setIsExporting(false);
       } catch (error) {
-        setExportError(
-          error.message || formatMessage(intl, MODULE_NAME, "grievanceReport.exportError"),
-        );
+        showError(error.message || formatMessage(intl, MODULE_NAME, "grievanceReport.exportError"));
+      } finally {
         setIsExporting(false);
       }
     },
-    [
-      columns,
-      dispatch,
-      intl,
-      modulesManager,
-      orderedReports,
-      queryParams,
-      reportTitle,
-      selectedReport,
-    ],
+    [columns, dispatch, intl, modulesManager, orderedReports, queryParams, reportTitle, selectedReport, showError],
   );
 
   const exportDisabled =
@@ -495,99 +423,65 @@ function TicketReportSearcher({
     orderedReports.length === 0 ||
     !rights.includes(RIGHT_TICKET_SEARCH);
 
+  const exportFormats = [
+    [EXPORT_FORMATS.CSV, "grievanceReport.exportCsv"],
+    [EXPORT_FORMATS.EXCEL, "grievanceReport.exportExcel"],
+    [EXPORT_FORMATS.PDF, "grievanceReport.exportPdf"],
+  ];
+
   return (
-    <Paper className={classes.paper}>
-      <Grid container className={classes.paperHeader}>
-        <Grid item xs={12} md={4}>
-          <Typography variant="h6">{reportTitle}</Typography>
-        </Grid>
-        <Grid item xs={12} md={8} className={classes.actions}>
-          <Button
-            className={classes.exportButton}
-            color="primary"
-            variant="outlined"
-            startIcon={<DescriptionIcon />}
-            onClick={() => handleExport(EXPORT_FORMATS.CSV)}
-            disabled={exportDisabled}
-          >
-            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportCsv")}
-          </Button>
-          <Button
-            className={classes.exportButton}
-            color="primary"
-            variant="outlined"
-            startIcon={<TableChartIcon />}
-            onClick={() => handleExport(EXPORT_FORMATS.EXCEL)}
-            disabled={exportDisabled}
-          >
-            {formatMessage(intl, MODULE_NAME, "grievanceReport.exportExcel")}
-          </Button>
-          <Button
-            className={classes.exportButton}
-            color="primary"
-            variant="outlined"
-            startIcon={<GetAppIcon />}
-            onClick={() => handleExport(EXPORT_FORMATS.PDF)}
-            disabled={exportDisabled}
-          >
-            {formatMessage(intl, MODULE_NAME, "grievanceReport.downloadPdf")}
-          </Button>
-        </Grid>
-      </Grid>
-
-      <Grid container className={classes.item}>
-        <TicketReportFilter filters={filters} onChangeFilters={onChangeFilters} />
-      </Grid>
-
-      <ProgressOrError progress={fetchingReports} error={errorReports} />
-
-      <div className={classes.tableContainer}>
-        <Table size="small" className={classes.table}>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell key={column.label} className={classes.reportCell}>
-                  {column.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {orderedReports.length === 0 && !fetchingReports ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className={`${classes.reportCell} ${classes.emptyRow}`}
-                >
-                  {formatMessage(intl, MODULE_NAME, "grievanceReport.noResults")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              orderedReports.map((row, rowIndex) => (
-                <TableRow key={`${row.report}-${row.ticketId || row.label || "row"}-${rowIndex}`}>
-                  {columns.map((column) => (
-                    <TableCell key={column.label} className={classes.reportCell}>
-                      {column.render(row, rowIndex)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      {exportError && (
-        <Dialog open={!!exportError} fullWidth maxWidth="sm">
-          <DialogTitle>{formatMessage(intl, MODULE_NAME, "grievanceReport.error")}</DialogTitle>
-          <DialogContent>{exportError}</DialogContent>
-          <DialogActions>
-            <Button onClick={() => setExportError(null)} color="primary" variant="contained">
-              {formatMessage(intl, MODULE_NAME, "grievanceReport.ok")}
+    <>
+      <SearcherPane
+        module={MODULE_NAME}
+        filterPane={<TicketReportFilter filters={filters} onChangeFilters={onChangeFilters} />}
+        reset={reset}
+        refresh={refresh}
+      />
+      <Paper className={classes.paper}>
+        <Grid container alignItems="center" className={classes.paperHeader}>
+          <Grid item xs={8} className={classes.paperHeaderTitle}>
+            {formatMessageWithValues(intl, MODULE_NAME, "grievanceReport.resultsTitle", {
+              title: reportTitle,
+              count: fetchingReports ? "…" : orderedReports.length,
+            })}
+          </Grid>
+          <Grid item xs={4} className={classes.paperHeaderAction}>
+            <Button
+              color="primary"
+              disabled={exportDisabled}
+              onClick={(event) => setExportMenu(event.currentTarget)}
+            >
+              {formatMessage(intl, MODULE_NAME, "grievanceReport.export")}
             </Button>
-          </DialogActions>
-        </Dialog>
-      )}
-    </Paper>
+            <Menu anchorEl={exportMenu} keepMounted open={!!exportMenu} onClose={() => setExportMenu(null)}>
+              {exportFormats.map(([format, label]) => (
+                <MenuItem key={format} onClick={() => handleExport(format)}>
+                  {formatMessage(intl, MODULE_NAME, label)}
+                </MenuItem>
+              ))}
+            </Menu>
+          </Grid>
+        </Grid>
+        <Divider />
+        <ProgressOrError progress={fetchingReports} error={errorReports} />
+        {!fetchingReports && orderedReports.length === 0 ? (
+          <Typography className={classes.empty} color="textSecondary">
+            {formatMessage(intl, MODULE_NAME, "grievanceReport.noResults")}
+          </Typography>
+        ) : (
+          <div className={classes.tableContainer}>
+            <Table
+              module={MODULE_NAME}
+              headers={columns.map((column) => column.id)}
+              aligns={columns.map((column) => (column.numeric ? "right" : "left"))}
+              itemFormatters={columns.map((column) => (row, rowIndex) => column.render(row, rowIndex))}
+              items={orderedReports}
+              withPagination={false}
+            />
+          </div>
+        )}
+      </Paper>
+    </>
   );
 }
 
