@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
-import { Button, FormControlLabel, Grid, MenuItem, Switch, TextField, Typography } from "@material-ui/core";
+import { FormControlLabel, Grid, Switch, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import RefreshIcon from "@material-ui/icons/Refresh";
 import {
   ProgressOrError,
   PublishedComponent,
+  SearcherPane,
+  SelectInput,
   historyPush,
   useHistory,
   useModulesManager,
@@ -36,7 +37,6 @@ import {
   KpiTiles,
   NameList,
   SimpleTable,
-  STATUS_COLORS,
   StackedStatusChart,
   TrendChart,
   WidgetCard,
@@ -47,22 +47,17 @@ const EMPTY_SECTIONS = [];
 
 const useStyles = makeStyles((theme) => ({
   root: { padding: theme.spacing(2) },
+  results: { marginTop: theme.spacing(2) },
   heading: { fontWeight: 700, marginBottom: theme.spacing(0.5) },
   intro: { color: theme.palette.text.secondary, marginBottom: theme.spacing(2) },
-  filters: {
-    marginBottom: theme.spacing(2),
-    padding: theme.spacing(1),
-    borderRadius: 12,
-    border: `1px solid ${theme.palette.divider}`,
-    background: theme.palette.background.paper,
-  },
-  filterItem: { padding: theme.spacing(1) },
-  applyItem: { padding: theme.spacing(1), display: "flex", alignItems: "flex-end" },
+  form: { padding: 0 },
+  item: { padding: theme.spacing(1) },
+  sectionHead: { marginBottom: theme.spacing(1.5) },
+  sectionTitle: { fontWeight: 700, color: theme.palette.text.primary, fontSize: "1.15rem" },
 }));
 
 // Grid width of each widget at md and up; every widget is full width on phones.
 const WIDGET_WIDTH = {
-  kpis: 12,
   trend: 8,
   resolutionStatus: 4,
   category: 6,
@@ -140,13 +135,22 @@ function GrievanceDashboard() {
   }, []);
   const setFilter = (id) => (value) => onChangeFilters([{ id, value }]);
 
-  const load = useCallback(() => {
-    dispatch(fetchGrievanceDashboard(modulesManager, buildParams(filters)));
-  }, [dispatch, modulesManager, filters]);
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const load = useCallback(
+    (current = filtersRef.current) => dispatch(fetchGrievanceDashboard(modulesManager, buildParams(current))),
+    [dispatch, modulesManager],
+  );
+  const refresh = useCallback(() => load(), [load]);
+  const reset = useCallback(() => {
+    const initial = defaultFilters();
+    setFilters(initial);
+    load(initial);
+  }, [load]);
 
   useEffect(() => {
     load();
-    // Initial load only; later loads come from the Apply button.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -180,22 +184,37 @@ function GrievanceDashboard() {
         render: () => (
           <KpiTiles
             tiles={[
-              { id: "filed", label: t("grievanceDashboard.kpi.filed"), value: formatNumber(summary.grievancesFiled), color: "#3F6FD8" },
-              { id: "open", label: t("grievanceDashboard.kpi.open"), value: formatNumber(openTotal), color: STATUS_COLORS.inProgressCount },
-              { id: "closed", label: t("grievanceDashboard.kpi.closed"), value: formatNumber(summary.closedCount), color: STATUS_COLORS.closedCount },
-              { id: "escalated", label: t("grievanceDashboard.kpi.escalated"), value: formatNumber(summary.escalatedCount), color: STATUS_COLORS.escalatedCount },
+              {
+                id: "filed",
+                label: t("grievanceDashboard.kpi.filed"),
+                value: formatNumber(summary.grievancesFiled),
+                caption: t("grievanceDashboard.kpi.filedCaption"),
+              },
+              {
+                id: "open",
+                label: t("grievanceDashboard.kpi.open"),
+                value: formatNumber(openTotal),
+                caption: t("grievanceDashboard.kpi.openCaption"),
+              },
               {
                 id: "overdue",
                 label: t("grievanceDashboard.kpi.overdue"),
                 value: formatNumber(summary.overdueCount),
-                color: STATUS_COLORS.escalatedCount,
+                severity: summary.overdueCount > 0 ? "bad" : null,
                 caption: t("grievanceDashboard.kpi.overdueCaption"),
+              },
+              {
+                id: "escalated",
+                label: t("grievanceDashboard.kpi.escalated"),
+                value: formatNumber(summary.escalatedCount),
+                severity: summary.escalatedCount > 0 ? "warn" : null,
+                caption: t("grievanceDashboard.kpi.escalatedCaption"),
               },
               {
                 id: "avgDays",
                 label: t("grievanceDashboard.kpi.averageClosureDays"),
                 value: formatNumber(summary.averageClosureDays),
-                color: "#9A60B4",
+                caption: t("grievanceDashboard.kpi.averageClosureDaysCaption"),
               },
               {
                 id: "onTime",
@@ -204,8 +223,9 @@ function GrievanceDashboard() {
                   summary.onTimeRate === null || summary.onTimeRate === undefined
                     ? "—"
                     : `${formatNumber(summary.onTimeRate)}%`,
-                color: STATUS_COLORS.closedCount,
-                caption: `${formatNumber(summary.resolvedOnTimeCount)} / ${formatNumber(resolvedWithTimeline)}`,
+                caption: `${formatNumber(summary.resolvedOnTimeCount)} / ${formatNumber(resolvedWithTimeline)} ${t(
+                  "grievanceDashboard.kpi.onTimeRateCaption",
+                )}`,
               },
             ]}
           />
@@ -292,6 +312,62 @@ function GrievanceDashboard() {
 
   const widgetById = Object.fromEntries(GRIEVANCE_DASHBOARD_WIDGETS.map((widget) => [widget.id, widget]));
 
+  const periodOptions = GRIEVANCE_DASHBOARD_PERIODS.map((period) => ({
+    value: period,
+    label: t(`grievanceDashboard.period.${period}`),
+  }));
+
+  const filterPane = (
+    <Grid container className={classes.form}>
+      <Grid item xs={12} sm={6} md={3} className={classes.item}>
+        <PublishedComponent
+          pubRef="core.DatePicker"
+          module={MODULE_NAME}
+          label="grievanceReport.dateFrom"
+          value={filters.dateFrom?.value ?? null}
+          onChange={setFilter("dateFrom")}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3} className={classes.item}>
+        <PublishedComponent
+          pubRef="core.DatePicker"
+          module={MODULE_NAME}
+          label="grievanceReport.dateTo"
+          value={filters.dateTo?.value ?? null}
+          onChange={setFilter("dateTo")}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3} className={classes.item}>
+        <PublishedComponent
+          pubRef="admin.UserPicker"
+          module={MODULE_NAME}
+          label={t("grievanceReport.agent")}
+          value={filters.agent?.value ?? null}
+          withNull
+          onChange={setFilter("agent")}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6} md={3} className={classes.item}>
+        <SelectInput
+          module={MODULE_NAME}
+          label="grievanceDashboard.period"
+          options={periodOptions}
+          value={filters.period?.value || "MONTH"}
+          onChange={setFilter("period")}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <PublishedComponent
+          pubRef="location.DetailedLocationFilter"
+          withNull
+          filters={filters}
+          onChangeFilters={onChangeFilters}
+          anchor="paa"
+        />
+      </Grid>
+    </Grid>
+  );
+
   return (
     <div className={classes.root}>
       <Typography variant="h5" className={classes.heading}>
@@ -299,77 +375,17 @@ function GrievanceDashboard() {
       </Typography>
       <Typography className={classes.intro}>{t("grievanceDashboard.intro")}</Typography>
 
-      <Grid container className={classes.filters}>
-        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
-          <PublishedComponent
-            pubRef="core.DatePicker"
-            module={MODULE_NAME}
-            label="grievanceReport.dateFrom"
-            value={filters.dateFrom?.value ?? null}
-            onChange={setFilter("dateFrom")}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
-          <PublishedComponent
-            pubRef="core.DatePicker"
-            module={MODULE_NAME}
-            label="grievanceReport.dateTo"
-            value={filters.dateTo?.value ?? null}
-            onChange={setFilter("dateTo")}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
-          <PublishedComponent
-            pubRef="admin.UserPicker"
-            module={MODULE_NAME}
-            label={t("grievanceReport.agent")}
-            value={filters.agent?.value ?? null}
-            withNull
-            onChange={setFilter("agent")}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3} className={classes.filterItem}>
-          <TextField
-            select
-            fullWidth
-            label={t("grievanceDashboard.period")}
-            value={filters.period?.value || "MONTH"}
-            onChange={(event) => setFilter("period")(event.target.value)}
-          >
-            {GRIEVANCE_DASHBOARD_PERIODS.map((period) => (
-              <MenuItem key={period} value={period}>
-                {t(`grievanceDashboard.period.${period}`)}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid item xs={12} md={10} className={classes.filterItem}>
-          <PublishedComponent
-            pubRef="location.DetailedLocationFilter"
-            withNull
-            filters={filters}
-            onChangeFilters={onChangeFilters}
-            anchor="paa"
-          />
-        </Grid>
-        <Grid item xs={12} md={2} className={classes.applyItem}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            startIcon={<RefreshIcon />}
-            onClick={load}
-            disabled={!!fetching}
-          >
-            {t("grievanceDashboard.apply")}
-          </Button>
-        </Grid>
-      </Grid>
+      <SearcherPane
+        module={MODULE_NAME}
+        filterPane={filterPane}
+        reset={reset}
+        refresh={refresh}
+      />
 
       <ProgressOrError progress={fetching} error={error} />
 
       {!fetching && !error && (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} className={classes.results}>
           {WIDGET_ORDER.map((id) => {
             const widget = widgetById[id];
             const config = widgets[id];
@@ -377,6 +393,20 @@ function GrievanceDashboard() {
             const isEmpty = config.isEmpty ?? (Array.isArray(data) ? data.length === 0 : !data);
             const canStack = Boolean(widget.stackedLinkReport);
             const linkReport = canStack && stacked[id] ? widget.stackedLinkReport : widget.linkReport;
+            if (id === "kpis") {
+              return (
+                <Grid item xs={12} key={id}>
+                  <div className={classes.sectionHead}>
+                    <Typography className={classes.sectionTitle}>{t(`grievanceDashboard.widget.${id}`)}</Typography>
+                  </div>
+                  {isEmpty ? (
+                    <Typography className={classes.intro}>{t("grievanceDashboard.empty")}</Typography>
+                  ) : (
+                    config.render(data)
+                  )}
+                </Grid>
+              );
+            }
             return (
               <Grid item xs={12} md={WIDGET_WIDTH[id] || 6} key={id}>
                 <WidgetCard

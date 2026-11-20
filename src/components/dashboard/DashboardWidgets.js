@@ -1,14 +1,17 @@
 import React from "react";
 import {
+  Box,
   Button,
+  Card,
+  CardContent,
   Chip,
-  Grid,
   Paper,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  Tooltip as MuiTooltip,
   Typography,
 } from "@material-ui/core";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
@@ -56,7 +59,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     padding: theme.spacing(2),
-    borderRadius: 12,
+    borderRadius: 8,
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: "none",
   },
@@ -79,23 +82,31 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     color: theme.palette.text.secondary,
   },
+  kpiGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: theme.spacing(2),
+    [theme.breakpoints.down("sm")]: { gridTemplateColumns: "1fr" },
+  },
   kpi: {
-    padding: theme.spacing(2),
-    borderRadius: 12,
+    height: "100%",
+    borderRadius: 8,
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: "none",
-    height: "100%",
-    borderLeft: "4px solid",
+  },
+  kpiContent: {
+    padding: theme.spacing(2.5, 2.75),
+    "&:last-child": { paddingBottom: theme.spacing(2.5) },
   },
   kpiLabel: {
     textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    fontSize: "0.7rem",
+    letterSpacing: "0.02em",
+    fontSize: "0.8rem",
     fontWeight: 600,
-    color: theme.palette.text.secondary,
+    color: theme.palette.text.primary,
   },
-  kpiValue: { fontSize: "2rem", fontWeight: 700, lineHeight: 1.1, marginTop: theme.spacing(0.5) },
-  kpiCaption: { fontSize: "0.75rem", color: theme.palette.text.secondary },
+  kpiValue: { fontSize: "2.2rem", fontWeight: 700, lineHeight: 1, marginTop: theme.spacing(2) },
+  kpiCaption: { fontSize: "0.82rem", color: theme.palette.grey[600], marginTop: theme.spacing(1.25), display: "block" },
   chips: { display: "flex", flexWrap: "wrap", gap: theme.spacing(0.5), maxHeight: 240, overflowY: "auto" },
   bigNumber: { fontSize: "2.2rem", fontWeight: 700, lineHeight: 1 },
   tableWrap: { overflow: "auto" },
@@ -139,18 +150,35 @@ export function WidgetCard({
 
 export function KpiTiles({ tiles }) {
   const classes = useStyles();
+  const theme = useTheme();
+  const accentFor = (severity) => {
+    if (severity === "bad") return theme.palette.error.main;
+    if (severity === "warn") return theme.palette.warning.main;
+    return theme.palette.primary.dark;
+  };
   return (
-    <Grid container spacing={2}>
-      {tiles.map((tile) => (
-        <Grid item xs={6} sm={4} md={3} key={tile.id}>
-          <Paper className={classes.kpi} style={{ borderLeftColor: tile.color }}>
-            <Typography className={classes.kpiLabel}>{tile.label}</Typography>
-            <Typography className={classes.kpiValue}>{tile.value}</Typography>
-            {tile.caption && <Typography className={classes.kpiCaption}>{tile.caption}</Typography>}
-          </Paper>
-        </Grid>
-      ))}
-    </Grid>
+    <Box className={classes.kpiGrid}>
+      {tiles.map((tile) => {
+        const card = (
+          <Card className={classes.kpi}>
+            <CardContent className={classes.kpiContent}>
+              <Typography className={classes.kpiLabel}>{tile.label}</Typography>
+              <Typography className={classes.kpiValue} style={{ color: accentFor(tile.severity) }}>
+                {tile.value}
+              </Typography>
+              {tile.caption && <Typography className={classes.kpiCaption}>{tile.caption}</Typography>}
+            </CardContent>
+          </Card>
+        );
+        return tile.tooltip ? (
+          <MuiTooltip key={tile.id} title={tile.tooltip}>
+            {card}
+          </MuiTooltip>
+        ) : (
+          <React.Fragment key={tile.id}>{card}</React.Fragment>
+        );
+      })}
+    </Box>
   );
 }
 
