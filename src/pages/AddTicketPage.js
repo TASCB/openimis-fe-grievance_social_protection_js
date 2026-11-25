@@ -812,6 +812,8 @@ class AddTicketPage extends Component {
                     onChange={(v) => this.updateAttribute("description", v)}
                     required={false}
                     readOnly={isSaved}
+                    multiline
+                    minRows={4}
                   />
                   <Alert severity="info" className={classes.descriptionHelperAlert}>
                     <FormattedMessage module={MODULE_NAME} id="ticket.description.helperText" />

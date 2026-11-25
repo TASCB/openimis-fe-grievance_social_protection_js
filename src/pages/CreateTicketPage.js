@@ -313,6 +313,8 @@ function CreateTicketPage({
                   value={stateEdited.description}
                   onChange={(v) => updateAttribute("description", v)}
                   readOnly={isSaved}
+                  multiline
+                  minRows={4}
                 />
               </Grid>
 
